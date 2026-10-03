@@ -22,7 +22,7 @@ export const problems: Problem[] = [
     status: 'Investigating',
     lead: 'R. Gunawan',
     unitId: 'U01',
-    detectedAt: '2026-10-01T06:12:00+07:00',
+    detectedAt: '2026-10-02T08:14:00+07:00',
   },
   {
     id: 'BL-5702',

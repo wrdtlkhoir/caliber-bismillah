@@ -1,12 +1,13 @@
 import { Construction } from 'lucide-react'
-import { Link, useLocation, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { NAV } from '@/components/layout/Sidebar'
 
 export default function ComingSoon() {
   const { pathname } = useLocation()
   const [params] = useSearchParams()
-  const title = NAV.find((n) => n.to === pathname)?.label ?? 'Page'
-  const id = params.get('id')
+  const route = useParams()
+  const title = NAV.find((n) => n.to !== '/' && pathname.startsWith(n.to))?.label ?? 'Page'
+  const id = route.id ?? params.get('id')
 
   return (
     <div className="mx-auto mt-16 flex max-w-md flex-col items-center gap-3 text-center">

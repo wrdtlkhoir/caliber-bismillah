@@ -4,8 +4,8 @@ Dashboard reliability & risk untuk unit Olefins & Polyolefins. Tujuannya menjawa
 **"Apa yang perlu ditangani sekarang?"** Caranya: alarm mentah dikelompokkan jadi *problem*, lalu
 problem diranking dengan **AHP (Analytic Hierarchy Process)**, dan setiap problem dihubungkan ke aksi dan pemiliknya.
 
-> Status: **Page 1 – Plant Intelligence / Overview** sudah jadi. Halaman lain (Problem Investigation,
-> Root Cause, dst.) baru berupa placeholder dengan routing.
+> Status: **Page 1 – Plant Intelligence / Overview** dan **Page 2 – Problem Investigation** sudah jadi.
+> Halaman lain (Root Cause, Action, dst.) baru berupa placeholder dengan routing.
 
 ## Menjalankan
 
@@ -28,7 +28,7 @@ Butuh Node.js ≥ 18 (sudah dites di Node 20).
 | Routing | **React Router 6** | Struktur multi-halaman sesuai sidebar; query pencarian disimpan di URL (`?q=`) |
 | Icons | **lucide-react** | Set ikon yang sama gayanya dengan desain (stroke 1.5–2px) |
 | Font | **Inter** + **JetBrains Mono** (via `@fontsource`) | Font di-bundle lokal, jadi tetap jalan **offline** saat presentasi |
-| Chart | Komponen custom (HTML/CSS) | Ringan, tanpa library, dan bisa dibuat persis seperti desain |
+| Chart | Komponen custom (HTML/CSS + SVG) | Ringan, tanpa library, bisa dibuat persis seperti desain, plus hover tooltip |
 
 Tidak ada backend: data diambil dari `src/data/plant.ts` (mock). Di produksi, data ini nantinya
 datang dari historian (mis. OSIsoft PI), CMMS (SAP PM), dan sistem condition monitoring.
@@ -49,13 +49,23 @@ src/
 │   ├── PriorityRanking.tsx   Ranking AHP
 │   ├── UrgentActions.tsx     Aksi + owner + due date
 │   └── UnitImpactChart.tsx   Downtime vs Production Loss per unit
+├── features/investigation/ Komponen Page 2
+│   ├── AssetSummary.tsx      Info aset + stepper lifecycle
+│   ├── RelevantParameters.tsx Parameter terpilih AI + daftar semua sinyal
+│   ├── ParameterCard.tsx     Kartu parameter (nilai, limit, tren)
+│   ├── TrendChart.tsx        Line chart SVG + crosshair tooltip
+│   ├── SidePanels.tsx        Benchmark, Impact Translation, Data Confidence
+│   └── SimilarIncidents.tsx  Tabel insiden historis + filter
 ├── lib/
 │   ├── ahp.ts         Bobot AHP + perhitungan skor & breakdown
 │   ├── severity.ts    Mapping warna severity/status
 │   ├── useCountUp.ts  Animasi angka KPI
+│   ├── useLiveSeries.ts Streaming telemetry (mode Live)
+│   ├── series.ts      Generator time-series mock
+│   ├── dossier.ts     Export dossier investigasi (.md)
 │   └── useSyncClock.ts Simulasi sinkronisasi real-time
 ├── data/              Tipe data + mock data
-└── pages/             Overview (Page 1), ComingSoon
+└── pages/             Overview (Page 1), Investigation (Page 2), ComingSoon
 ```
 
 ## Fitur Page 1 (selain visual)
@@ -77,6 +87,23 @@ src/
 - **Responsif**: sidebar jadi drawer di layar kecil, KPI menyusun ulang ke 2–3 kolom, grafik bisa di-scroll horizontal.
 - **Aksesibilitas**: atribut ARIA untuk tab/radio/breadcrumb, mendukung `prefers-reduced-motion`.
 
+## Fitur Page 2 — Problem Investigation (`/investigation/:id`)
+
+Dibuka dari tombol **View ›** di kartu problem Page 1, atau ketik tag persis (mis. `KO-3201`) di
+pencarian lalu tekan **Enter**. Kelima problem punya data investigasi lengkap.
+
+- **Relevant Parameters (AI Filtered)**: 4 sensor paling relevan untuk failure mode, masing-masing dengan
+  nilai, limit Trip/Alarm, tren (pita hijau = normal, garis merah = alarm), dan hover tooltip per titik.
+  *Show all signals* membuka daftar sinyal lainnya.
+- **Live Telemetry**: tombol di kanan atas menyalakan mode streaming; chart, nilai, dan pin benchmark
+  bergerak setiap 1,5 detik.
+- **What Changed? — Benchmark**: posisi nilai sekarang terhadap zona normal, alarm, dan kegagalan historis.
+- **Impact Translation & Risk**: rantai dari anomali sensor → kesehatan mesin → bahaya operasional → biaya.
+- **Data Confidence Score**: hover segmen untuk melihat sumber data mana yang sudah selaras atau belum ada.
+- **Similar Historical Incidents**: filter All / High Similarity / per kategori, lengkap dengan RCA dan perbaikannya.
+- **Export Dossier** mengunduh ringkasan investigasi (`.md`); **Ask CALIBER** membuka panel samping;
+  **Request Field …** membuat nomor work request (toast); **Proceed to Root Cause Analysis** lanjut ke Page 3.
+
 ## Aset dari Figma
 
 Desain: [Figma – Caliber](https://www.figma.com/design/zlQH8RYCAdNQyYJQXJvZjD/Caliber?node-id=0-1)
@@ -88,7 +115,7 @@ Ikon lain sudah dari `lucide-react`, jadi tidak perlu di-export.
 
 ## Roadmap
 
-1. Page 2–6 (Problem Investigation, Root Cause & Decision, Action & Reliability, Knowledge Base, Data Sources)
+1. Page 3–6 (Root Cause & Decision, Action & Reliability, Knowledge Base, Data Sources)
 2. Ganti mock data dengan API (mis. React Query + REST/WebSocket untuk data real-time)
 3. Ask CALIBER disambungkan ke LLM, dengan konteks dari data problem
 4. Deploy ke Vercel / Netlify (`npm run build` → folder `dist/`)

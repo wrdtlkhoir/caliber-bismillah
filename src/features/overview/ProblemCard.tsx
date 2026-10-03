@@ -101,7 +101,7 @@ export function ProblemCard({ problem: p, selected, highlighted, onSelect, onHov
           Lead: <span className="text-ink">{p.lead}</span>
         </span>
         <Link
-          to={`/investigation?id=${p.id}`}
+          to={`/investigation/${p.id}`}
           onClick={(e) => e.stopPropagation()}
           className="ml-auto flex items-center gap-0.5 text-[15px] text-ink hover:text-navy-700"
         >
