@@ -6,7 +6,6 @@ import type { TimeRange } from '@/data/types'
 import { CRITICAL_RISK_THRESHOLD, rankProblems } from '@/lib/ahp'
 import { fmtDate, useAsOf } from '@/lib/asOf'
 import { AsOfControl } from '@/features/overview/AsOfControl'
-import { BacktestPanel } from '@/features/overview/BacktestPanel'
 import { AskCaliber } from '@/features/overview/AskCaliber'
 import { KpiStrip } from '@/features/overview/KpiStrip'
 import { LifecyclePipeline } from '@/features/overview/LifecyclePipeline'
@@ -160,7 +159,6 @@ export default function Overview() {
           if (id) document.getElementById('problem-tank')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }}
       />
-      <BacktestPanel />
     </div>
   )
 }

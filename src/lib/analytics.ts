@@ -130,21 +130,6 @@ export function assetHealth(a: Asset, asOf: string): AssetHealth {
   return { asset: a, readings, latest, params, worst, phase }
 }
 
-/** Tanggal pertama CALIBER akan memberi peringatan sebelum failure (backtest). */
-export function backtest(a: Asset) {
-  const pre = a.history.filter((h) => h.date < a.failureDate)
-  const warn = pre.find((h) => ['early-warning', 'alarm'].includes(assetHealth(a, h.date).phase))
-  const alarm = pre.find((h) => h.status === 'ALARM')
-  return {
-    tag: a.tag,
-    failureDate: a.failureDate,
-    firstWarning: warn?.date ?? null,
-    firstAlarm: alarm?.date ?? null,
-    warningLeadDays: warn ? daysBetween(warn.date, a.failureDate) : null,
-    alarmLeadDays: alarm ? daysBetween(alarm.date, a.failureDate) : null,
-  }
-}
-
 /* ------------------------------------------------------------------ */
 /* Similar incident retrieval                                           */
 /* ------------------------------------------------------------------ */

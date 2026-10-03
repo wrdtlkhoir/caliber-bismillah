@@ -61,15 +61,10 @@ CALIBER memakai metode **analitik yang bisa dijelaskan**, semuanya di `src/lib/a
 | Kemampuan | Metode | Dipakai di |
 |---|---|---|
 | Health & early warning | Baseline (6 pembacaan normal pertama, mean ± 2σ), *degradation index* (0 = baseline, 1 = trip), regresi linear 6 minggu terakhir → **proyeksi hari menuju alarm/trip** | Page 1, 2 |
-| Backtest | Aturan early-warning diputar ulang di setiap minggu sebelum failure | Page 1 |
 | Similar incident retrieval | Skor kemiripan berbobot: tipe equipment 30%, keluarga komponen 30%, mekanisme 25%, disiplin 10%, plant 5%. Hanya insiden yang sudah terjadi sebelum tanggal replay | Page 2, 3, 4 |
 | Prioritas problem | AHP 6 kriteria. Konsekuensi (loss & produksi dari RCA), pre-risk, kelas aset, degradasi saat ini, rekurensi (insiden mirip) | Page 1 |
 | Ranking root cause | AHP penuh: **pairwise matrix Saaty → eigenvector → Consistency Ratio (≈0.06)** → sintesis skor hipotesis. Evidence dari tabel 4P/4M+1E (NG = mendukung, G = membantah) + korelasi tren CM | Page 3 |
 | KPI | Agregasi Incident Database per jendela waktu (downtime, loss, exposure risiko terbuka, closure rate, repeat pattern) | Page 1, 4 |
-
-**Hasil backtest** dari dataset: aturan early-warning CALIBER menyala **70–105 hari sebelum failure (rata-rata 84 hari)**.
-Status ALARM di data condition monitoring rata-rata baru muncul 67 hari sebelum failure. Untuk PM-4405B,
-CALIBER memberi peringatan 35 hari lebih awal.
 
 **Pengembangan berikutnya (opsional):** *Ask CALIBER* bisa disambungkan ke LLM (mis. Claude API) dengan pola
 RAG, yaitu mengambil teks RCA dan insiden mirip sebagai konteks. Pola ini juga tidak butuh training. Saat ini
@@ -99,7 +94,7 @@ src/
 │   ├── rootCause.ts          Builder Page 3 (+ kurasi judul hipotesis & pemetaan 4P → parameter)
 │   └── actions.ts            Builder Page 4
 ├── lib/
-│   ├── analytics.ts          Health, early warning, backtest, retrieval, KPI, PI helper
+│   ├── analytics.ts          Health, early warning, retrieval, KPI, PI helper
 │   ├── ahp.ts                AHP prioritas problem (Page 1)
 │   ├── ahpPairwise.ts        AHP penuh untuk root cause (matrix, eigenvector, CR)
 │   ├── asOf.tsx              Context tanggal replay
@@ -107,7 +102,7 @@ src/
 │   ├── usePersistentState.ts useState yang tersimpan di localStorage
 │   └── dossier.ts            Export dossier investigasi & RCA (.md)
 ├── features/
-│   ├── overview/             Page 1: AsOfControl, KpiStrip, ProblemTank, PriorityRanking, UnitImpactChart, BacktestPanel, …
+│   ├── overview/             Page 1: AsOfControl, KpiStrip, ProblemTank, PriorityRanking, UnitImpactChart, …
 │   ├── investigation/        Page 2: ParameterCard, TrendChart, PiReplay, SidePanels, SimilarIncidents, …
 │   ├── rootcause/            Page 3: HypothesisCard, RankingPanel, ValidationPanel, AuditTrail, KnowledgePath, …
 │   └── actions/              Page 4: CapaTable, AddActionModal, VerificationChart
@@ -130,7 +125,6 @@ src/
   - Ranking AHP dan Ask CALIBER.
 - **Urgent Actions**: action CAPA terbuka dari laporan RCA, ditandai *Overdue* relatif terhadap tanggal replay.
 - **Downtime vs Loss by Plant**: data dari Incident Database. Klik plant untuk memfilter problem.
-- **Early-Warning Backtest**: klik baris untuk melompat ke tanggal peringatan pertama.
 
 ### Page 2 — Problem Investigation (`/investigation/:tag`)
 - **Empat parameter condition monitoring** per aset (26 minggu), lengkap dengan:
