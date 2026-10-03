@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider, type Params } from 'react-router-d
 import { AppLayout } from '@/components/layout/AppLayout'
 import { NAV } from '@/components/layout/Sidebar'
 import { investigations } from '@/data/investigation'
+import Actions from '@/pages/Actions'
 import ComingSoon from '@/pages/ComingSoon'
 import Investigation from '@/pages/Investigation'
 import Overview from '@/pages/Overview'
@@ -29,7 +30,13 @@ const router = createBrowserRouter([
         element: <RootCause />,
         handle: handle((p) => ['Plant', investigations[p.id ?? '']?.unitLabel ?? 'Unit', p.id ?? '', 'Root Cause & Decision']),
       },
-      ...NAV.filter((n) => !['/', '/investigation', '/root-cause'].includes(n.to)).map((n) => ({
+      { path: 'actions', element: <Actions /> },
+      {
+        path: 'actions/:id',
+        element: <Actions />,
+        handle: handle(() => ['Action & Reliability', 'Execution & Health']),
+      },
+      ...NAV.filter((n) => !['/', '/investigation', '/root-cause', '/actions'].includes(n.to)).map((n) => ({
         path: n.to,
         element: <ComingSoon />,
         handle: handle(() => ['CALIBER', n.label]),

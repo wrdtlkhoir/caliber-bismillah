@@ -4,8 +4,8 @@ Dashboard reliability & risk untuk unit Olefins & Polyolefins. Tujuannya menjawa
 **"Apa yang perlu ditangani sekarang?"** Caranya: alarm mentah dikelompokkan jadi *problem*, lalu
 problem diranking dengan **AHP (Analytic Hierarchy Process)**, dan setiap problem dihubungkan ke aksi dan pemiliknya.
 
-> Status: **Page 1 – Overview**, **Page 2 – Problem Investigation**, dan **Page 3 – Root Cause & Decision**
-> sudah jadi. Halaman lain (Action & Reliability, dst.) baru berupa placeholder dengan routing.
+> Status: **Page 1 – Overview**, **Page 2 – Problem Investigation**, **Page 3 – Root Cause & Decision**, dan
+> **Page 4 – Action & Reliability** sudah jadi. Knowledge Base dan Data Sources baru berupa placeholder dengan routing.
 
 ## Menjalankan
 
@@ -63,10 +63,15 @@ src/
 │   ├── AuditTrail.tsx        Decision audit trail
 │   ├── PriorCheck.tsx        Bayesian prior + perbandingan unit kembar
 │   └── KnowledgePath.tsx     Knowledge path + kanvas ontologi
+├── features/actions/   Komponen Page 4
+│   ├── CapaTable.tsx         Tabel CAPA (status bisa diubah)
+│   ├── AddActionModal.tsx    Form tambah action item
+│   └── VerificationChart.tsx Chart before vs after perbaikan
 ├── lib/
 │   ├── ahp.ts         Bobot AHP + perhitungan skor & breakdown
 │   ├── ahpPairwise.ts AHP penuh: pairwise matrix → eigenvector → CR → sintesis
 │   ├── useDecision.ts Keputusan engineer (disimpan di localStorage)
+│   ├── usePersistentState.ts useState yang tersimpan di localStorage
 │   ├── severity.ts    Mapping warna severity/status
 │   ├── useCountUp.ts  Animasi angka KPI
 │   ├── useLiveSeries.ts Streaming telemetry (mode Live)
@@ -74,7 +79,7 @@ src/
 │   ├── dossier.ts     Export dossier investigasi (.md)
 │   └── useSyncClock.ts Simulasi sinkronisasi real-time
 ├── data/              Tipe data + mock data
-└── pages/             Overview (1), Investigation (2), RootCause (3), ComingSoon
+└── pages/             Overview (1), Investigation (2), RootCause (3), Actions (4), ComingSoon
 ```
 
 ## Fitur Page 1 (selain visual)
@@ -133,7 +138,25 @@ Dibuka dari tombol **Proceed to Root Cause Analysis** di Page 2.
 - **Expand Ontology Canvas** menampilkan graf failure-mode (aset → komponen → mode → bukti → riwayat → aksi).
 - **Export RCA Dossier** mengunduh ranking, bukti, keputusan, dan audit trail (`.md`).
 
-> Untuk mereset keputusan saat demo: buka DevTools → Application → Local Storage → hapus key `caliber.rc.*`.
+> Untuk mereset keputusan saat demo: buka DevTools → Application → Local Storage → hapus key `caliber.rc.*` (Page 3) dan `caliber.capa.*` (Page 4).
+
+## Fitur Page 4 — Action & Reliability Loop (`/actions/:id`)
+
+Dibuka dari tombol **Proceed to Action Plan** setelah Accept di Page 3, atau dari *View All Actions* di Page 1.
+
+- **Terhubung dengan Page 3**: kalau hipotesis sudah di-*Accept*, banner "Validated root cause" memakai
+  hipotesis dan waktu keputusan tersebut.
+- **Action Plan (CAPA)**:
+  - Status tiap action bisa diubah langsung dari tabel. Workflow strip (Maintenance work dst.) dan
+    lifecycle ikut menyesuaikan, dan action yang lewat tenggat ditandai *Overdue*.
+  - *Add Action Item* menambah baris baru dengan nomor WO otomatis.
+- **Post-Action Verification**: chart before (merah) vs after (hijau) dengan garis Trip/Alarm, penanda waktu
+  maintenance, dan hover tooltip.
+- **Close CAPA** memperingatkan kalau masih ada action terbuka; **Reopen / Escalate** wajib diisi alasannya.
+- **Symptom fixed, system cause still open** muncul otomatis selama action preventif belum selesai;
+  *View Action #n* men-scroll dan menyorot baris terkait.
+- **Cross-Equipment Learning**: *Create Pro-active Review* membuat nomor review untuk aset sejenis di fleet.
+- Semua perubahan tersimpan di localStorage (key `caliber.capa.*`).
 
 ## Aset dari Figma
 
@@ -146,7 +169,7 @@ Ikon lain sudah dari `lucide-react`, jadi tidak perlu di-export.
 
 ## Roadmap
 
-1. Page 4–6 (Action & Reliability, Knowledge Base, Data Sources)
+1. Page 5–6 (Knowledge Base, Data Sources)
 2. Ganti mock data dengan API (mis. React Query + REST/WebSocket untuk data real-time)
 3. Ask CALIBER disambungkan ke LLM, dengan konteks dari data problem
 4. Deploy ke Vercel / Netlify (`npm run build` → folder `dist/`)

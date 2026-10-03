@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import { ArrowRight, BadgeCheck, FilePlus2, ListPlus, RotateCcw, UserCheck, X } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import type { Hypothesis } from '@/data/rootCause'
 import type { HypothesisDecision } from '@/lib/useDecision'
@@ -17,6 +17,7 @@ interface Props {
 }
 
 export function ValidationPanel({ h, decision, acceptedId, placeholder, onAction }: Props) {
+  const { id: problemId } = useParams()
   const [text, setText] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -54,7 +55,7 @@ export function ValidationPanel({ h, decision, acceptedId, placeholder, onAction
           </p>
           <p className="mt-1 text-[14px] text-ink">{h.title}</p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Link to="/actions" className="flex items-center gap-2 rounded-lg bg-navy-800 px-4 py-2 text-[14.5px] font-medium text-white hover:bg-navy-700">
+            <Link to={`/actions/${problemId}`} className="flex items-center gap-2 rounded-lg bg-navy-800 px-4 py-2 text-[14.5px] font-medium text-white hover:bg-navy-700">
               Proceed to Action Plan <ArrowRight className="size-4" />
             </Link>
             <button onClick={() => run('undo')} className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[14px] text-ink-2 hover:bg-white">
