@@ -21,7 +21,9 @@ function load(problemId: string): DecisionState {
 }
 
 export function nowWib() {
-  return new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' })
+  const d = new Date()
+  const opt = { timeZone: 'Asia/Jakarta' } as const
+  return `${d.toLocaleDateString('en-GB', { ...opt, day: '2-digit', month: 'short' })} · ${d.toLocaleTimeString('en-GB', { ...opt, hour: '2-digit', minute: '2-digit' })}`
 }
 
 /** Keputusan engineer per problem, disimpan di localStorage supaya bertahan saat pindah halaman. */

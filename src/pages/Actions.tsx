@@ -12,20 +12,21 @@ import {
   Sparkles,
   TriangleAlert,
 } from 'lucide-react'
-import { Fragment, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { Card, Mono } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
-import { actionCases, type ActionCase, type ActionStatus, type CapaAction } from '@/data/actions'
-import { investigations, type Investigation } from '@/data/investigation'
-import { currentUser, problems } from '@/data/plant'
-import { rootCauses } from '@/data/rootCause'
+import { buildActionCase, type ActionCase, type ActionStatus, type CapaAction } from '@/data/actions'
+import { assetByTag } from '@/data/dataset'
+import { buildProblem, buildProblems, currentUser, plantLabel } from '@/data/plant'
+import { buildRootCause } from '@/data/rootCause'
+import { rankProblems } from '@/lib/ahp'
+import { fmtDate, useAsOf } from '@/lib/asOf'
 import type { Problem } from '@/data/types'
 import { AddActionModal } from '@/features/actions/AddActionModal'
 import { CapaTable } from '@/features/actions/CapaTable'
 import { VerificationChart } from '@/features/actions/VerificationChart'
-import { formatDetected } from '@/features/investigation/AssetSummary'
 import { useDecision } from '@/lib/useDecision'
 import { usePersistentState } from '@/lib/usePersistentState'
 
@@ -39,16 +40,17 @@ interface PersistedCapa {
 
 export default function Actions() {
   const { id } = useParams()
-  const problem = problems.find((p) => p.id === id)
-  const ac = id ? actionCases[id] : undefined
-  const inv = id ? investigations[id] : undefined
+  const { asOf } = useAsOf()
+  const asset = assetByTag(id)
+  const ac = useMemo(() => (asset ? buildActionCase(asset, asOf) : null), [asset, asOf])
 
-  if (!problem || !ac || !inv) return <Navigate to={`/actions/${problems[0].id}`} replace />
-  return <ActionsView key={problem.id} problem={problem} ac={ac} inv={inv} />
+  if (!asset || !ac) return <Navigate to={`/actions/${rankProblems(buildProblems(asOf))[0]?.id ?? 'KO-3201'}`} replace />
+  return <ActionsView key={asset.tag} problem={buildProblem(asset, asOf)} ac={ac} asOf={asOf} />
 }
 
-function ActionsView({ problem, ac, inv }: { problem: Problem; ac: ActionCase; inv: Investigation }) {
-  const [capa, setCapa] = usePersistentState<PersistedCapa>(`caliber.capa.${problem.id}`, { actions: ac.actions, state: 'open', reviews: {} })
+function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; asOf: string }) {
+  const [capa, setCapa] = usePersistentState<PersistedCapa>(`caliber.capa.v2.${problem.id}`, { actions: ac.actions, state: 'open', reviews: {} })
+  const rcCase = useMemo(() => buildRootCause(ac.asset, asOf), [ac.asset, asOf])
   const { decisions, log } = useDecision(problem.id)
   const [addOpen, setAddOpen] = useState(false)
   const [closeOpen, setCloseOpen] = useState(false)
@@ -58,16 +60,16 @@ function ActionsView({ problem, ac, inv }: { problem: Problem; ac: ActionCase; i
 
   // Validasi dari Page 3 (kalau engineer sudah Accept) menggantikan data bawaan
   const acceptedId = Object.keys(decisions).find((k) => decisions[k] === 'accepted')
-  const acceptedHyp = acceptedId ? rootCauses[problem.id]?.hypotheses.find((h) => h.id === acceptedId) : undefined
+  const acceptedHyp = acceptedId ? rcCase?.hypotheses.find((h) => h.id === acceptedId) : undefined
   const acceptedLog = [...log].reverse().find((l) => l.text.includes(`accepted ${acceptedId}`))
   const validation = acceptedHyp
-    ? { id: ac.validation.id, rootCause: acceptedHyp.title, by: `${currentUser.name} (${currentUser.role})`, at: `Today ${acceptedLog?.time ?? ''} WIB` }
+    ? { id: ac.validation.id, rootCause: acceptedHyp.title, by: `${currentUser.name} (${currentUser.role})`, at: `${acceptedLog?.time ?? ''} WIB` }
     : ac.validation
 
   const { actions } = capa
   const openActions = actions.filter((a) => a.status !== 'Done')
   const correctiveDone = actions.filter((a) => a.type === 'Corrective').every((a) => a.status === 'Done')
-  const restored = !!ac.verification.after
+  const restored = ac.restored
   const systemic = ac.systemicActionIndex !== undefined ? actions[ac.systemicActionIndex] : undefined
 
   const workflow = [
@@ -101,7 +103,7 @@ function ActionsView({ problem, ac, inv }: { problem: Problem; ac: ActionCase; i
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <nav className="flex items-center gap-1.5 text-[13.5px] text-ink-2" aria-label="Breadcrumb">
-            <Link to="/" className="hover:text-ink">Plant</Link> › <span>{inv.unitLabel}</span> ›{' '}
+            <Link to="/" className="hover:text-ink">Plant</Link> › <span>{plantLabel(ac.asset.plant)}</span> ›{' '}
             <Link to={`/investigation/${problem.id}`} className="font-mono hover:text-ink">{problem.id}</Link> ›{' '}
             <span className="text-ink">Action &amp; Reliability Loop</span>
           </nav>
@@ -109,16 +111,23 @@ function ActionsView({ problem, ac, inv }: { problem: Problem; ac: ActionCase; i
           <p className="text-[16px] text-ink-2">What should we do — and did it actually work?</p>
         </div>
         <p className="flex items-center gap-2 text-[14px] text-ink-2">
-          Context Cycle: <Mono className="rounded bg-info-soft px-2 py-1 text-[13px] font-semibold text-navy-800">{ac.contextCycle}</Mono>
+          MTO No.: <Mono className="rounded bg-info-soft px-2 py-1 text-[13px] font-semibold text-navy-800">{ac.contextCycle}</Mono>
         </p>
       </div>
+
+      {ac.preFailure && (
+        <p className="flex items-center gap-2 rounded-lg border border-medium/30 bg-medium-soft px-4 py-2.5 text-[14px] text-ink">
+          <TriangleAlert className="size-4 shrink-0 text-[#b7860b]" />
+          At the replay date ({fmtDate(asOf)}) this failure has not happened yet — the CAPA below is the record from {ac.rca.arNo}, reported {fmtDate(ac.rca.dateReported)}.
+        </p>
+      )}
 
       {/* Asset strip */}
       <Card className="grid items-center gap-4 px-5 py-4 lg:grid-cols-[minmax(0,1fr)_auto] 2xl:grid-cols-[auto_minmax(0,1fr)_auto]">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2.5">
             <Mono className="text-[20px] font-bold text-navy-800">{problem.id}</Mono>
-            <span className="rounded bg-info-soft px-2 py-0.5 text-[13.5px] text-navy-700">{inv.assetType}</span>
+            <span className="rounded bg-info-soft px-2 py-0.5 text-[13.5px] text-navy-700">{ac.asset.type}</span>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-[13.5px]">
             <span className="rounded bg-high-soft px-2 py-0.5 text-high">{ac.criticality}</span>
@@ -151,9 +160,9 @@ function ActionsView({ problem, ac, inv }: { problem: Problem; ac: ActionCase; i
 
         <div className="text-right">
           <p className="text-[15px] text-ink">
-            Reliability Lead: <span className="font-medium">{problem.lead}</span>
+            RCA PIC: <span className="font-medium">{problem.lead}</span>
           </p>
-          <Mono className="text-[13px] text-ink-2">Detected: {formatDetected(problem.detectedAt)}</Mono>
+          <Mono className="text-[13px] text-ink-2">Failure: {fmtDate(ac.asset.failureDate)} · {ac.rca.impact.downtimeH} h</Mono>
         </div>
       </Card>
 
@@ -174,10 +183,10 @@ function ActionsView({ problem, ac, inv }: { problem: Problem; ac: ActionCase; i
 
       {/* KPI */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Kpi label="CAPA Effectiveness Rate" value={`${ac.kpis.effectiveness.value}%`} badge={<><span aria-hidden>▲</span> {ac.kpis.effectiveness.delta} <span className="text-[12px] font-normal">{ac.kpis.effectiveness.benchmark}</span></>} badgeTone="good" foot="Verified non-recurrence ›90d" />
-        <Kpi label="Action Closure Time" value={<>{ac.kpis.closure.value}<span className="ml-1 font-sans text-xl font-normal text-ink-2">d</span></>} badge={<><span aria-hidden>▼</span> {ac.kpis.closure.delta} <span className="text-[12px] font-normal">vs fleet</span></>} badgeTone="info" foot={ac.kpis.closure.benchmark} />
-        <Kpi label="Repeat Failure Rate" value={<span className="text-good">{ac.kpis.repeat.value}%</span>} badge={ac.kpis.repeat.badge} badgeTone="good" foot={ac.kpis.repeat.benchmark} />
-        <Kpi label="Awaiting Verification" value={<span className="text-high">{ac.kpis.awaiting.value}</span>} badge="Active Watch" badgeTone="high" foot={ac.kpis.awaiting.note} />
+        <Kpi label="Risk Closure Rate" value={`${ac.kpis.effectiveness.value}%`} badge={<>{ac.kpis.effectiveness.delta} <span className="text-[12px] font-normal">{ac.kpis.effectiveness.benchmark}</span></>} badgeTone="good" foot="Incidents past RCA that reached RISK CLOSED" />
+        <Kpi label="CAPA Plan Lead Time" value={<>{ac.kpis.closure.value}<span className="ml-1 font-sans text-xl font-normal text-ink-2">d</span></>} badge={<>{ac.kpis.closure.delta} <span className="text-[12px] font-normal">vs median</span></>} badgeTone="info" foot={ac.kpis.closure.benchmark} />
+        <Kpi label="Repeat Pattern Rate" value={<span className="text-high">{ac.kpis.repeat.value}%</span>} badge={ac.kpis.repeat.badge} badgeTone="high" foot={ac.kpis.repeat.benchmark} />
+        <Kpi label="In Monitoring" value={<span className="text-high">{ac.kpis.awaiting.value}</span>} badge="Active Watch" badgeTone="high" foot={ac.kpis.awaiting.note} />
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -206,7 +215,37 @@ function ActionsView({ problem, ac, inv }: { problem: Problem; ac: ActionCase; i
           </ol>
 
           <div className="mt-4">
-            <CapaTable actions={actions} highlightId={highlight} onStatus={setStatus} />
+            <CapaTable actions={actions} highlightId={highlight} onStatus={setStatus} refDate={asOf} />
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <div>
+              <h3 className="text-[13px] font-medium uppercase tracking-wide text-ink-2">PM schedule established</h3>
+              <ul className="mt-2 space-y-1.5">
+                {ac.rca.pmSchedule.map((pm) => (
+                  <li key={pm.no} className="flex items-start gap-3 rounded-lg bg-slate-50 px-3 py-2 text-[13.5px]">
+                    <Mono className="shrink-0 font-semibold text-navy-700">{pm.no}</Mono>
+                    <span className="flex-1 text-ink">{pm.description}</span>
+                    <span className="shrink-0 text-ink-2">
+                      {pm.interval} · {pm.group}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-[13px] font-medium uppercase tracking-wide text-ink-2">Risk analysis of corrective action</h3>
+              <ul className="mt-2 space-y-1.5">
+                {ac.rca.risks.map((r) => (
+                  <li key={r.action} className="rounded-lg bg-slate-50 px-3 py-2 text-[13.5px]">
+                    <p className="text-ink">{r.action}</p>
+                    <p className="text-ink-2">
+                      <span className="text-high">Risk:</span> {r.risk} · <span className="text-good">Countermeasure:</span> {r.countermeasure} ({r.pic})
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </Card>
 

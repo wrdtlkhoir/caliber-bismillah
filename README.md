@@ -1,11 +1,17 @@
 # CALIBER — Plant Intelligence Dashboard
 
-Dashboard reliability & risk untuk unit Olefins & Polyolefins. Tujuannya menjawab satu pertanyaan:
-**"Apa yang perlu ditangani sekarang?"** Caranya: alarm mentah dikelompokkan jadi *problem*, lalu
-problem diranking dengan **AHP (Analytic Hierarchy Process)**, dan setiap problem dihubungkan ke aksi dan pemiliknya.
+Dashboard reliability & risk untuk **Case 2: Intelligent Manufacturing**. Tujuannya menjawab satu pertanyaan:
+**"Apa yang perlu ditangani sekarang?"** Caranya:
 
-> Status: **Page 1 – Overview**, **Page 2 – Problem Investigation**, **Page 3 – Root Cause & Decision**, dan
-> **Page 4 – Action & Reliability** sudah jadi. Knowledge Base dan Data Sources baru berupa placeholder dengan routing.
+1. Data condition monitoring yang terpisah-pisah diubah menjadi *problem* yang bisa ditindaklanjuti.
+2. Problem diranking dengan **AHP (Analytic Hierarchy Process)**.
+3. Setiap problem dihubungkan ke insiden serupa, root cause, dan CAPA beserta pemiliknya.
+
+Semua angka di dashboard **dihitung dari dataset resmi lomba** (Equipment Performance, Production Data,
+Incident Database, laporan RCA), bukan data dummy.
+
+> Status: Page 1 Overview, Page 2 Problem Investigation, Page 3 Root Cause & Decision, dan Page 4 Action & Reliability
+> sudah jadi. Knowledge Base dan Data Sources masih placeholder.
 
 ## Menjalankan
 
@@ -13,163 +19,154 @@ problem diranking dengan **AHP (Analytic Hierarchy Process)**, dan setiap proble
 npm install
 npm run dev       # http://localhost:5173
 npm run build     # type-check + build produksi ke dist/
-npm run preview   # serve hasil build
+npm run preview   # serve hasil build (http://localhost:4173)
+npm run data      # (opsional) bangun ulang data dari folder dataset — lihat di bawah
 ```
 
-Butuh Node.js ≥ 18 (sudah dites di Node 20).
+Butuh Node.js ≥ 18 (sudah dites di Node 20). Web tetap jalan **offline**: data dan font sudah ikut di-bundle.
+
+## Data: dari dataset lomba ke dashboard
+
+```
+Case 2_ Intelligence Manufacturing/        (dataset resmi panitia)
+├── Equipment Performance/*.xlsx   info aset, limit alarm/trip, 26 minggu history kondisi, KPI reliability
+├── Production Data/*.xlsx         PI tag + data per jam selama 1 bulan sekitar failure
+├── Incident Database/*.xlsx       380 insiden: plant, tipe, komponen, mekanisme, downtime, loss, status RCA/CAPA
+└── RCA - Downtime Data/*.pptx     laporan RCA: kronologi, verifikasi 4P & 4M+1E, root cause, CAPA, PM, risk
+
+        │  npm run data   (scripts/build-dataset.mjs — SheetJS + JSZip)
+        ▼
+src/data/generated/dataset.json    satu file JSON bertipe (src/data/dataset.ts), ~350 KB
+        │
+        ▼  src/lib/analytics.ts + builder per halaman (src/data/plant.ts, investigation.ts, rootCause.ts, actions.ts)
+Dashboard
+```
+
+Kalau panitia memberi dataset baru dengan format yang sama, cukup taruh foldernya di root project lalu
+jalankan `npm run data`. Script juga memberi peringatan kalau ada tabel RCA yang gagal terbaca.
+
+### Mode replay ("as of")
+
+Setiap failure di dataset terjadi pada tanggal berbeda (Mar–Jul 2026). Karena itu dashboard punya
+**tanggal replay**, yaitu slider di Page 1 dengan preset "1 week before {tag} failure". Semua halaman menghitung
+kondisi aset, KPI, insiden yang sudah diketahui, dan CAPA **pada tanggal tersebut**. Dengan begitu juri bisa
+melihat bagaimana degradasi sebenarnya sudah terlihat berminggu-minggu sebelum aset trip.
+
+## Apakah perlu training AI?
+
+**Tidak.** Dataset-nya kecil, yaitu 5 aset × 26 minggu, 5 laporan RCA, dan 380 insiden. Itu terlalu sedikit untuk
+melatih model machine learning yang bisa dipercaya, dan juri tidak bisa memverifikasi model yang tidak transparan.
+CALIBER memakai metode **analitik yang bisa dijelaskan**, semuanya di `src/lib/analytics.ts` dan `src/lib/ahpPairwise.ts`:
+
+| Kemampuan | Metode | Dipakai di |
+|---|---|---|
+| Health & early warning | Baseline (6 pembacaan normal pertama, mean ± 2σ), *degradation index* (0 = baseline, 1 = trip), regresi linear 6 minggu terakhir → **proyeksi hari menuju alarm/trip** | Page 1, 2 |
+| Backtest | Aturan early-warning diputar ulang di setiap minggu sebelum failure | Page 1 |
+| Similar incident retrieval | Skor kemiripan berbobot: tipe equipment 30%, keluarga komponen 30%, mekanisme 25%, disiplin 10%, plant 5%. Hanya insiden yang sudah terjadi sebelum tanggal replay | Page 2, 3, 4 |
+| Prioritas problem | AHP 6 kriteria. Konsekuensi (loss & produksi dari RCA), pre-risk, kelas aset, degradasi saat ini, rekurensi (insiden mirip) | Page 1 |
+| Ranking root cause | AHP penuh: **pairwise matrix Saaty → eigenvector → Consistency Ratio (≈0.06)** → sintesis skor hipotesis. Evidence dari tabel 4P/4M+1E (NG = mendukung, G = membantah) + korelasi tren CM | Page 3 |
+| KPI | Agregasi Incident Database per jendela waktu (downtime, loss, exposure risiko terbuka, closure rate, repeat pattern) | Page 1, 4 |
+
+**Hasil backtest** dari dataset: aturan early-warning CALIBER menyala **70–105 hari sebelum failure (rata-rata 84 hari)**.
+Status ALARM di data condition monitoring rata-rata baru muncul 67 hari sebelum failure. Untuk PM-4405B,
+CALIBER memberi peringatan 35 hari lebih awal.
+
+**Pengembangan berikutnya (opsional):** *Ask CALIBER* bisa disambungkan ke LLM (mis. Claude API) dengan pola
+RAG, yaitu mengambil teks RCA dan insiden mirip sebagai konteks. Pola ini juga tidak butuh training. Saat ini
+jawabannya disusun dari data secara rule-based supaya demo tetap offline.
 
 ## Tech stack
 
 | Layer | Pilihan | Alasan |
 |---|---|---|
-| Build tool | **Vite 6** | Dev server instan + HMR, build cepat, konfigurasinya minim |
-| UI framework | **React 18 + TypeScript** | Berbasis komponen, type-safe, ekosistemnya paling besar |
-| Styling | **Tailwind CSS v4** | Design token dari Figma ditaruh di `@theme` (`src/index.css`), utility-first jadi mudah dibuat sama persis dengan Figma |
-| Routing | **React Router 6** | Struktur multi-halaman sesuai sidebar; query pencarian disimpan di URL (`?q=`) |
-| Icons | **lucide-react** | Set ikon yang sama gayanya dengan desain (stroke 1.5–2px) |
-| Font | **Inter** + **JetBrains Mono** (via `@fontsource`) | Font di-bundle lokal, jadi tetap jalan **offline** saat presentasi |
-| Chart | Komponen custom (HTML/CSS + SVG) | Ringan, tanpa library, bisa dibuat persis seperti desain, plus hover tooltip |
-
-Tidak ada backend: data diambil dari `src/data/plant.ts` (mock). Di produksi, data ini nantinya
-datang dari historian (mis. OSIsoft PI), CMMS (SAP PM), dan sistem condition monitoring.
+| Build tool | **Vite 6** | Dev server instan, build cepat |
+| UI framework | **React 18 + TypeScript** | Berbasis komponen, type-safe |
+| Styling | **Tailwind CSS v4** | Design token dari Figma di `@theme` (`src/index.css`) |
+| Routing | **React Router 6** | Multi-halaman sesuai sidebar; breadcrumb dari `handle` route |
+| Icons / Font | **lucide-react**, **Inter** + **JetBrains Mono** (`@fontsource`) | Sesuai desain, di-bundle lokal |
+| Chart | Komponen SVG custom | Ringan, sama persis dengan desain, ada hover tooltip |
+| ETL | **SheetJS** (Excel) + **JSZip** (PowerPoint) | Membaca dataset lomba langsung, tanpa konversi manual |
 
 ## Struktur folder
 
 ```
+scripts/build-dataset.mjs     ETL dataset lomba → src/data/generated/dataset.json
 src/
-├── components/
-│   ├── layout/        AppLayout, Sidebar, Topbar, BrandMark
-│   └── ui/            Card, Mono (primitive)
-├── features/overview/ Komponen Page 1
-│   ├── KpiStrip.tsx          6 KPI + animasi count-up
-│   ├── LifecyclePipeline.tsx Detected → … → Closed
-│   ├── ProblemTank.tsx       Filter severity + sort
-│   ├── ProblemCard.tsx       Kartu problem + sinyal sensor
-│   ├── AskCaliber.tsx        Asisten kontekstual (Q&A)
-│   ├── PriorityRanking.tsx   Ranking AHP
-│   ├── UrgentActions.tsx     Aksi + owner + due date
-│   └── UnitImpactChart.tsx   Downtime vs Production Loss per unit
-├── features/investigation/ Komponen Page 2
-│   ├── AssetSummary.tsx      Info aset + stepper lifecycle
-│   ├── RelevantParameters.tsx Parameter terpilih AI + daftar semua sinyal
-│   ├── ParameterCard.tsx     Kartu parameter (nilai, limit, tren)
-│   ├── TrendChart.tsx        Line chart SVG + crosshair tooltip
-│   ├── SidePanels.tsx        Benchmark, Impact Translation, Data Confidence
-│   └── SimilarIncidents.tsx  Tabel insiden historis + filter
-├── features/rootcause/ Komponen Page 3
-│   ├── HypothesisCard.tsx    Kartu hipotesis (expanded / compact)
-│   ├── RankingPanel.tsx      Breakdown AHP + modal pairwise matrix
-│   ├── ValidationPanel.tsx   Accept / Modify / Request Evidence / Reject
-│   ├── AuditTrail.tsx        Decision audit trail
-│   ├── PriorCheck.tsx        Bayesian prior + perbandingan unit kembar
-│   └── KnowledgePath.tsx     Knowledge path + kanvas ontologi
-├── features/actions/   Komponen Page 4
-│   ├── CapaTable.tsx         Tabel CAPA (status bisa diubah)
-│   ├── AddActionModal.tsx    Form tambah action item
-│   └── VerificationChart.tsx Chart before vs after perbaikan
+├── data/
+│   ├── dataset.ts            Tipe + akses dataset hasil ETL
+│   ├── plant.ts              Builder Page 1 (problem, KPI, plant, urgent action, lifecycle)
+│   ├── investigation.ts      Builder Page 2
+│   ├── rootCause.ts          Builder Page 3 (+ kurasi judul hipotesis & pemetaan 4P → parameter)
+│   └── actions.ts            Builder Page 4
 ├── lib/
-│   ├── ahp.ts         Bobot AHP + perhitungan skor & breakdown
-│   ├── ahpPairwise.ts AHP penuh: pairwise matrix → eigenvector → CR → sintesis
-│   ├── useDecision.ts Keputusan engineer (disimpan di localStorage)
+│   ├── analytics.ts          Health, early warning, backtest, retrieval, KPI, PI helper
+│   ├── ahp.ts                AHP prioritas problem (Page 1)
+│   ├── ahpPairwise.ts        AHP penuh untuk root cause (matrix, eigenvector, CR)
+│   ├── asOf.tsx              Context tanggal replay
+│   ├── useDecision.ts        Keputusan engineer (localStorage)
 │   ├── usePersistentState.ts useState yang tersimpan di localStorage
-│   ├── severity.ts    Mapping warna severity/status
-│   ├── useCountUp.ts  Animasi angka KPI
-│   ├── useLiveSeries.ts Streaming telemetry (mode Live)
-│   ├── series.ts      Generator time-series mock
-│   ├── dossier.ts     Export dossier investigasi (.md)
-│   └── useSyncClock.ts Simulasi sinkronisasi real-time
-├── data/              Tipe data + mock data
-└── pages/             Overview (1), Investigation (2), RootCause (3), Actions (4), ComingSoon
+│   └── dossier.ts            Export dossier investigasi & RCA (.md)
+├── features/
+│   ├── overview/             Page 1: AsOfControl, KpiStrip, ProblemTank, PriorityRanking, UnitImpactChart, BacktestPanel, …
+│   ├── investigation/        Page 2: ParameterCard, TrendChart, PiReplay, SidePanels, SimilarIncidents, …
+│   ├── rootcause/            Page 3: HypothesisCard, RankingPanel, ValidationPanel, AuditTrail, KnowledgePath, …
+│   └── actions/              Page 4: CapaTable, AddActionModal, VerificationChart
+├── components/               Layout (Sidebar, Topbar) & UI (Card, Modal, Drawer, Toast)
+└── pages/                    Overview, Investigation, RootCause, Actions, ComingSoon
 ```
 
-## Fitur Page 1 (selain visual)
+## Fitur per halaman
 
-- **Skor AHP dihitung, bukan di-hardcode.** `lib/ahp.ts` menjumlahkan skor 6 kriteria × bobot
-  (Safety 28%, Prod Loss 24%, Financial 20%, Crit. Equip 14%, Degradation 9%, Recurrence 5%).
-  Hover baris ranking untuk melihat driver terbesarnya.
-- **Time range 7d / 30d / 90d** mengubah KPI (dengan animasi count-up) dan grafik unit.
-- **Problem Tank**: tab severity dengan jumlah per kategori, sort (AHP / Newest / ID), dan pencarian global
-  di topbar (shortcut `/` atau `Ctrl+K`, `Esc` untuk clear).
-- **Ask CALIBER**: klik kartu problem untuk mengganti *Active Context*. Tombol *Why prioritized? /
-  What changed? / Show evidence / Next step?* menghasilkan jawaban yang dirangkai dari data
-  (breakdown AHP, sinyal, aksi terkait). Fungsi `answer()` bisa diganti dengan panggilan LLM.
-- **Panel saling terhubung**: klik item di Priority Ranking atau Urgent Actions akan scroll ke kartu
-  terkait dan menyorotnya; hover ranking juga menyorot kartunya.
-- **Grafik unit bisa diklik** untuk mengisolasi problem di unit tersebut (filter Problem Tank + ranking).
-  Garis threshold putus-putus, tooltip saat hover bar.
-- **Indikator real-time**: label "Sync Xm ago" berjalan, auto-sync tiap 5 menit, dan bisa diklik untuk sync manual.
-- **Responsif**: sidebar jadi drawer di layar kecil, KPI menyusun ulang ke 2–3 kolom, grafik bisa di-scroll horizontal.
-- **Aksesibilitas**: atribut ARIA untuk tab/radio/breadcrumb, mendukung `prefers-reduced-motion`.
+### Page 1 — Plant Intelligence (`/`)
+- **Dataset replay**: slider tanggal + preset sebelum tiap failure.
+- **KPI**:
+  - Availability aset termonitor.
+  - Downtime dan loss dari Incident DB per jendela 90 hari / 6 bulan / 12 bulan, dengan delta terhadap periode sebelumnya.
+  - Exposure = potential loss dari risiko yang masih terbuka.
+- **Lifecycle**: jumlah insiden per status (New Registered → RCA Process → CA/PA Execution → Monitoring → Risk Closed).
+- **Problem Tank**:
+  - Aset dengan fase early-warning / alarm / trip / CAPA.
+  - Sinyal berisi nilai asli terhadap limit, plus proyeksi "Trip in ~N d".
+  - Ranking AHP dan Ask CALIBER.
+- **Urgent Actions**: action CAPA terbuka dari laporan RCA, ditandai *Overdue* relatif terhadap tanggal replay.
+- **Downtime vs Loss by Plant**: data dari Incident Database. Klik plant untuk memfilter problem.
+- **Early-Warning Backtest**: klik baris untuk melompat ke tanggal peringatan pertama.
 
-## Fitur Page 2 — Problem Investigation (`/investigation/:id`)
+### Page 2 — Problem Investigation (`/investigation/:tag`)
+- **Empat parameter condition monitoring** per aset (26 minggu), lengkap dengan:
+  - pita baseline, garis alarm/trip, dan tooltip,
+  - perubahan 4 minggu dan proyeksi menuju alarm/trip.
+- **Hourly PI Telemetry**: tombol *Live Telemetry* memutar ulang data PI jam demi jam. Untuk KO-3201,
+  terlihat vibrasi naik 27–29 April sampai trip, dan arsiran abu-abu menandai jam saat RUN_STATUS = OFF.
+- **Benchmark, Impact Translation, Data Confidence**: semuanya dihitung, termasuk *expected loss* dari rata-rata insiden paling mirip.
+- **Similar Historical Incidents**: hasil retrieval dari 380 insiden, lengkap dengan skor dan alasan kecocokan.
 
-Dibuka dari tombol **View ›** di kartu problem Page 1, atau ketik tag persis (mis. `KO-3201`) di
-pencarian lalu tekan **Enter**. Kelima problem punya data investigasi lengkap.
+### Page 3 — Root Cause & Decision (`/root-cause/:tag`)
+- **H1** = root cause terverifikasi dari RCA. Bukti diambil dari item 4P / 4M+1E berstatus NG, ditambah korelasi tren CM yang dihitung.
+- **H2/H3** = item berstatus G yang membantah hipotesis alternatif (mis. *process surge*, *rotor unbalance*).
+- **AHP pairwise**: matriks, λmax, CI, dan CR bisa dilihat lewat *View pairwise comparison matrix*.
+- **Engineer Validation**: Accept / Modify / Request Evidence / Reject. Semua aksi masuk audit trail yang diisi dari **kronologi RCA asli**.
+- **Historical Prior** (insiden mirip yang sudah ditutup) dan **Knowledge Path**: aset → komponen → mode → sinyal → AR → CAPA → PM.
 
-- **Relevant Parameters (AI Filtered)**: 4 sensor paling relevan untuk failure mode, masing-masing dengan
-  nilai, limit Trip/Alarm, tren (pita hijau = normal, garis merah = alarm), dan hover tooltip per titik.
-  *Show all signals* membuka daftar sinyal lainnya.
-- **Live Telemetry**: tombol di kanan atas menyalakan mode streaming; chart, nilai, dan pin benchmark
-  bergerak setiap 1,5 detik.
-- **What Changed? — Benchmark**: posisi nilai sekarang terhadap zona normal, alarm, dan kegagalan historis.
-- **Impact Translation & Risk**: rantai dari anomali sensor → kesehatan mesin → bahaya operasional → biaya.
-- **Data Confidence Score**: hover segmen untuk melihat sumber data mana yang sudah selaras atau belum ada.
-- **Similar Historical Incidents**: filter All / High Similarity / per kategori, lengkap dengan RCA dan perbaikannya.
-- **Export Dossier** mengunduh ringkasan investigasi (`.md`); **Ask CALIBER** membuka panel samping;
-  **Request Field …** membuat nomor work request (toast); **Proceed to Root Cause Analysis** lanjut ke Page 3.
+### Page 4 — Action & Reliability Loop (`/actions/:tag`)
+- **CAPA dari RCA**: corrective, pro-active, dan preventive, lengkap dengan PIC, tanggal rencana, dan status. Status bisa diubah, dan action baru bisa ditambahkan.
+- **PM schedule** dan **risk analysis** dari laporan RCA.
+- **Verifikasi before/after** memakai history kondisi asli (sebelum dan sesudah repair), ditambah pengecekan normalisasi dan recurrence watch.
+- **KPI dari Incident DB**: risk closure rate, CAPA plan lead time, repeat pattern rate, dan jumlah insiden in monitoring.
+- **Fleet vulnerability**: tag dari action pro-active (mis. KO-3202/3203) dan aset sejenis di plant yang sama.
+- **Integrasi dengan Page 3**: kalau hipotesis sudah di-*Accept* di Page 3, banner validasi memakai keputusan tersebut.
 
-## Fitur Page 3 — Root Cause & Decision (`/root-cause/:id`)
-
-Dibuka dari tombol **Proceed to Root Cause Analysis** di Page 2.
-
-- **AHP sungguhan, bukan angka statis.** Bobot 6 kriteria (Evidence 28%, Historical 20%, Temporal 18%,
-  Engineering 16%, Data Confidence 10%, Controllability 8%) dihitung dari **pairwise comparison matrix**
-  skala Saaty lewat eigenvector utama. **Consistency Ratio** (CR ≈ 0.06 < 0.10) juga dihitung. Skor tiap
-  hipotesis lalu disintesis dan dinormalisasi supaya totalnya 1.00 (H1 0.52 · H2 0.31 · H3 0.17).
-  Klik *View pairwise comparison matrix* untuk melihat matriks, λmax, CI, RI, dan CR.
-  Logikanya ada di `src/lib/ahpPairwise.ts`.
-- **Klik hipotesis mana pun** untuk membuka detailnya; panel "Why is Hx ranked…" ikut berganti.
-- **Engineer Validation**:
-  - *Accept* mencatat keputusan dan memunculkan tombol *Proceed to Action Plan*.
-  - *Reject* dan *Modify* wajib diisi justifikasinya.
-  - *Request Evidence* otomatis menyebut sumber data yang belum tersedia.
-  - Semua aksi masuk ke **Decision Audit Trail** dan **tersimpan di localStorage**, jadi tidak hilang saat refresh.
-- **Compare Twins** membandingkan sinyal saat ini dengan kejadian serupa di unit kembar.
-- **Expand Ontology Canvas** menampilkan graf failure-mode (aset → komponen → mode → bukti → riwayat → aksi).
-- **Export RCA Dossier** mengunduh ranking, bukti, keputusan, dan audit trail (`.md`).
-
-> Untuk mereset keputusan saat demo: buka DevTools → Application → Local Storage → hapus key `caliber.rc.*` (Page 3) dan `caliber.capa.*` (Page 4).
-
-## Fitur Page 4 — Action & Reliability Loop (`/actions/:id`)
-
-Dibuka dari tombol **Proceed to Action Plan** setelah Accept di Page 3, atau dari *View All Actions* di Page 1.
-
-- **Terhubung dengan Page 3**: kalau hipotesis sudah di-*Accept*, banner "Validated root cause" memakai
-  hipotesis dan waktu keputusan tersebut.
-- **Action Plan (CAPA)**:
-  - Status tiap action bisa diubah langsung dari tabel. Workflow strip (Maintenance work dst.) dan
-    lifecycle ikut menyesuaikan, dan action yang lewat tenggat ditandai *Overdue*.
-  - *Add Action Item* menambah baris baru dengan nomor WO otomatis.
-- **Post-Action Verification**: chart before (merah) vs after (hijau) dengan garis Trip/Alarm, penanda waktu
-  maintenance, dan hover tooltip.
-- **Close CAPA** memperingatkan kalau masih ada action terbuka; **Reopen / Escalate** wajib diisi alasannya.
-- **Symptom fixed, system cause still open** muncul otomatis selama action preventif belum selesai;
-  *View Action #n* men-scroll dan menyorot baris terkait.
-- **Cross-Equipment Learning**: *Create Pro-active Review* membuat nomor review untuk aset sejenis di fleet.
-- Semua perubahan tersimpan di localStorage (key `caliber.capa.*`).
+> Reset data demo: DevTools → Application → Local Storage → hapus key `caliber.*`.
 
 ## Aset dari Figma
 
-Desain: [Figma – Caliber](https://www.figma.com/design/zlQH8RYCAdNQyYJQXJvZjD/Caliber?node-id=0-1)
-
-Logo di `components/layout/BrandMark.tsx` masih **placeholder SVG**. Untuk memakai logo resmi:
-pilih logo di Figma → *Export* → SVG → simpan sebagai `public/logo.svg`, lalu ganti `<svg>` di
-`BrandMark.tsx` dengan `<img src="/logo.svg" alt="Chandra Asri" className="h-8" />`.
-Ikon lain sudah dari `lucide-react`, jadi tidak perlu di-export.
+Desain: [Figma – Caliber](https://www.figma.com/design/zlQH8RYCAdNQyYJQXJvZjD/Caliber?node-id=0-1).
+Logo di `components/layout/BrandMark.tsx` masih placeholder. Untuk menggantinya, export logo resmi sebagai SVG
+ke `public/logo.svg`, lalu ganti `<svg>` di komponen tersebut dengan `<img src="/logo.svg" … />`.
 
 ## Roadmap
 
-1. Page 5–6 (Knowledge Base, Data Sources)
-2. Ganti mock data dengan API (mis. React Query + REST/WebSocket untuk data real-time)
-3. Ask CALIBER disambungkan ke LLM, dengan konteks dari data problem
-4. Deploy ke Vercel / Netlify (`npm run build` → folder `dist/`)
+1. Page 5–6: Knowledge Base (indeks RCA & lessons learned) dan Data Sources (status pipeline ETL).
+2. Ask CALIBER via LLM + RAG atas teks RCA dan Incident Database.
+3. Code-splitting dataset (dynamic import) supaya bundle awal lebih kecil.
+4. Deploy ke Vercel / Netlify (`npm run build` → `dist/`).

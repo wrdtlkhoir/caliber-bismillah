@@ -1,188 +1,232 @@
 /**
- * Mock data Plant Intelligence. Di produksi, data ini datang dari
- * historian (PI/OSIsoft), CMMS (SAP PM) dan sistem condition monitoring.
+ * Builder data Page 1 (Plant Intelligence) dari dataset asli pada tanggal "as of".
  */
-import type { Kpi, LifecycleStage, Problem, TimeRange, UnitImpact, UrgentAction } from './types'
+import {
+  assetHealth,
+  kpis,
+  plantImpact,
+  readingsUpTo,
+  similarIncidents,
+  statusCounts,
+  type ParamHealth,
+} from '@/lib/analytics'
+import { addDays, daysBetween, fmtDate } from '@/lib/asOf'
+import { assets, incidentOf, incidents, type Asset, type CmParam } from './dataset'
+import type { Kpi, LifecycleStage, Problem, ProblemStatus, Severity, Signal, SignalIcon, TimeRange, UnitImpact, UrgentAction } from './types'
 
-export const PLANT_SCOPE = 'Olefins & Polyolefins Units'
+export const currentUser = { name: 'Dr. Aris S.', role: 'Lead Reliability', notifications: 2 }
 
-export const problems: Problem[] = [
-  {
-    id: 'KO-3201',
-    equipment: 'C3 Feed Splitter Reboiler',
-    severity: 'critical',
-    criteria: { safety: 0.95, prodLoss: 0.91, financial: 0.85, critEquip: 0.9, degradation: 0.78, recurrence: 0.6 },
-    area: 'Olefin Cracker #1 · C3 Splitter Section',
-    title: 'High radial vibration with rising lube-oil water content',
-    signals: [
-      { label: 'Radial Vib: 11.4 mm/s (Alarm: 9.0)', tone: 'critical', icon: 'alert' },
-      { label: 'Water in Oil: 480 ppm (Limit: 200)', tone: 'critical', icon: 'drop' },
-      { label: '1X phase shift 42°', tone: 'neutral', icon: 'trend' },
-    ],
-    status: 'Investigating',
-    lead: 'R. Gunawan',
-    unitId: 'U01',
-    detectedAt: '2026-10-02T08:14:00+07:00',
-  },
-  {
-    id: 'BL-5702',
-    equipment: 'Extruder Main Blower',
-    severity: 'high',
-    criteria: { safety: 0.62, prodLoss: 0.85, financial: 0.76, critEquip: 0.82, degradation: 0.7, recurrence: 0.66 },
-    area: 'Polypropylene Plant · Extrusion Train',
-    title: 'High vibration with dominant 2X harmonic (misalignment signature)',
-    signals: [
-      { label: 'Vib 2X: 7.8 mm/s', tone: 'high', icon: 'gauge' },
-      { label: 'Coupling Temp: 78°C', tone: 'medium', icon: 'temp' },
-      { label: 'Motor Current: steady (48A)', tone: 'neutral', icon: 'check' },
-    ],
-    status: 'Diagnosis Pending',
-    lead: 'T. Wardhana',
-    unitId: 'U03',
-    detectedAt: '2026-09-29T14:40:00+07:00',
-  },
-  {
-    id: 'PU-2101B',
-    equipment: 'Ethylene Transfer Pump B',
-    severity: 'high',
-    criteria: { safety: 0.72, prodLoss: 0.7, financial: 0.66, critEquip: 0.7, degradation: 0.68, recurrence: 0.55 },
-    area: 'Ethylene Tank Farm · Transfer Unit',
-    title: 'Suction pressure drop accompanied by cavitation acoustic spikes',
-    signals: [
-      { label: 'Suction P: 1.1 bar (Norm: 2.4)', tone: 'high', icon: 'down' },
-      { label: 'High-freq Acoustic: +14 dB', tone: 'high', icon: 'wave' },
-      { label: 'Flow: -8%', tone: 'neutral' },
-    ],
-    status: 'Action in Progress',
-    lead: 'M. Faisal',
-    unitId: 'U06',
-    detectedAt: '2026-09-30T09:05:00+07:00',
-  },
-  {
-    id: 'HE-3301',
-    equipment: 'Pygas Feed/Effluent Exchanger',
-    severity: 'medium',
-    criteria: { safety: 0.35, prodLoss: 0.62, financial: 0.6, critEquip: 0.5, degradation: 0.7, recurrence: 0.45 },
-    area: 'Pyrolysis Gasoline Unit · Exchanger Train',
-    title: 'Tube-side differential pressure rising / heat duty declining',
-    signals: [
-      { label: 'dP: 1.85 bar (Clean: 0.9)', tone: 'medium', icon: 'diff' },
-      { label: 'Heat Coeff: -18%', tone: 'medium' },
-      { label: 'Skin Temp: Normal', tone: 'neutral' },
-    ],
-    status: 'Validated',
-    lead: 'D. Pratama',
-    unitId: 'U05',
-    detectedAt: '2026-09-24T11:20:00+07:00',
-  },
-  {
-    id: 'PM-4405B',
-    equipment: 'Boiler Feed Pump Motor B',
-    severity: 'medium',
-    criteria: { safety: 0.4, prodLoss: 0.4, financial: 0.42, critEquip: 0.55, degradation: 0.6, recurrence: 0.3 },
-    area: 'Utilities & Power · Boiler Feed Pump',
-    title: 'Drive-end bearing temperature gradual upward drift (+12°C/3w)',
-    signals: [
-      { label: 'Bearing DE: 82°C (Alarm: 85)', tone: 'medium', icon: 'temp' },
-      { label: 'Grease Degr Index: Elev.', tone: 'neutral' },
-    ],
-    status: 'Investigating',
-    lead: 'H. Santoso',
-    unitId: 'U01',
-    detectedAt: '2026-09-12T08:00:00+07:00',
-  },
+export const RANGE_DAYS: Record<TimeRange, number> = { '90d': 90, '180d': 180, '365d': 365 }
+
+/** Nama plant dari laporan RCA ("ZCU  (Zeta Cracker Unit)"); plant lain hanya punya kode. */
+export const PLANT_NAMES: Record<string, string> = Object.fromEntries(
+  assets
+    .map((a) => a.rca?.plant.match(/^([A-Z0-9]+)\s*\((.*)\)$/))
+    .filter((m): m is RegExpMatchArray => !!m)
+    .map((m) => [m[1], m[2]]),
+)
+export const plantLabel = (code: string) => PLANT_NAMES[code] ?? code
+export const PLANT_SCOPE = `${new Set(incidents.map((i) => i.plant)).size} plants · ${incidents.length} recorded incidents`
+
+/* ------------------------------------------------------------------ */
+
+export const fmtValue = (p: CmParam, v: number) => {
+  const digits = Math.abs(p.alarm) < 2 ? 3 : Math.abs(p.alarm) < 20 ? 2 : 1
+  return Number(v.toFixed(digits)).toString()
+}
+
+const ICON: [RegExp, SignalIcon][] = [
+  [/micron|mm\/s/, 'gauge'],
+  [/°C/, 'temp'],
+  [/ppm|L\/min/, 'drop'],
+  [/bar/, 'diff'],
+  [/%/, 'trend'],
+]
+const iconOf = (p: CmParam): SignalIcon => (p.direction === 'low' && /bar/.test(p.unit) ? 'down' : ICON.find(([re]) => re.test(p.unit))?.[1] ?? 'trend')
+
+function paramSignal(ph: ParamHealth): Signal {
+  const p = ph.param
+  const limit = ph.state === 'trip' ? `Trip: ${p.trip}` : `Alarm: ${p.alarm}`
+  const tone = ph.state === 'trip' ? 'critical' : ph.state === 'alarm' ? (ph.index >= 0.75 ? 'critical' : 'high') : ph.index >= 0.3 ? 'medium' : 'neutral'
+  return { label: `${p.label}: ${fmtValue(p, ph.value)} ${p.unit} (${limit})`, tone, icon: iconOf(p) }
+}
+
+/** Tanggal awal episode degradasi yang sedang berjalan. */
+function episodeStart(a: Asset, asOf: string) {
+  const pre = readingsUpTo(a, asOf).filter((r) => r.date < a.failureDate || a.failureDate > asOf)
+  let start: string | null = null
+  for (let i = pre.length - 1; i >= 0; i--) {
+    const ph = assetHealth(a, pre[i].date).phase
+    if (ph === 'healthy' || ph === 'no-data') break
+    start = pre[i].date
+  }
+  return start ?? pre[pre.length - 1]?.date ?? asOf
+}
+
+const PRE_RISK: Record<string, number> = { I: 1, II: 0.85, III: 0.55, IV: 0.3 }
+const CLASS: Record<string, number> = { A: 1, B: 0.6, C: 0.3 }
+const maxOf = (f: (a: Asset) => number) => Math.max(...assets.map(f))
+const MAX_PROD = maxOf((a) => a.rca?.impact.productionLossT ?? 0)
+const MAX_LOSS = maxOf((a) => a.rca?.impact.lossK ?? 0)
+
+export function openActionsOf(a: Asset, asOf: string) {
+  if (!a.rca || a.rca.dateReported > asOf) return []
+  return a.rca.actions.filter((x) => x.status !== 'Closed')
+}
+
+export function buildProblem(a: Asset, asOf: string): Problem {
+  const h = assetHealth(a, asOf)
+  const inc = incidentOf(a)
+  const [p0, p1] = h.params
+
+  let severity: Severity = 'medium'
+  if (h.phase === 'trip') severity = 'critical'
+  else if (h.phase === 'alarm') severity = p0.index >= 0.75 || (p0.daysToTrip !== null && p0.daysToTrip <= 14) ? 'critical' : 'high'
+
+  const open = openActionsOf(a, asOf)
+  const status: ProblemStatus =
+    h.phase === 'early-warning'
+      ? 'Early Warning'
+      : h.phase === 'alarm'
+        ? 'Investigating'
+        : h.phase === 'trip'
+          ? 'RCA in Progress'
+          : h.phase === 'post-repair' && open.length
+            ? 'CA/PA Execution'
+            : 'Monitoring'
+
+  let title = a.failureMode
+  let signals: Signal[] = []
+  if (h.phase === 'post-repair') {
+    const primary = h.params.find((x) => x.param.key === 'p1') ?? p0
+    const total = a.rca?.actions.length ?? 0
+    title = `Post-failure CAPA — ${a.failureMode}`
+    signals = [
+      { label: `Restored: ${primary.param.label} ${fmtValue(primary.param, primary.value)} ${primary.param.unit}`, tone: 'neutral', icon: 'check' },
+      { label: `${total - open.length}/${total} CAPA actions closed`, tone: open.length ? 'medium' : 'neutral', icon: 'trend' },
+      { label: `Failure ${fmtDate(a.failureDate)} · ${a.summary.downtimeH} h downtime`, tone: 'neutral' },
+    ]
+  } else if (p0) {
+    const dir = (ph: ParamHealth) => (ph.param.direction === 'high' ? 'rising' : 'falling')
+    if (h.phase === 'alarm') {
+      const where = p0.state === 'normal' ? 'approaching alarm' : `${p0.param.direction === 'high' ? 'above' : 'below'} ${p0.state}`
+      title = `${p0.param.label} ${where}${p1 && p1.index >= 0.3 ? ` with ${dir(p1)} ${p1.param.label}` : ''}`
+    } else if (h.phase === 'early-warning') {
+      title = `${p0.param.label} ${p0.param.direction === 'high' ? 'trending up' : 'trending down'}${p0.daysToAlarm ? ` — alarm projected in ~${p0.daysToAlarm} days` : ''}`
+    }
+    signals = h.params.slice(0, 2).map(paramSignal)
+    if (p0.daysToTrip && p0.daysToTrip > 0 && h.phase !== 'early-warning')
+      signals.push({ label: `Trip in ~${p0.daysToTrip} d (trend)`, tone: p0.daysToTrip <= 14 ? 'critical' : 'high', icon: 'alert' })
+    else if (p0.daysToAlarm && p0.daysToAlarm > 0) signals.push({ label: `Alarm in ~${p0.daysToAlarm} d (trend)`, tone: 'medium', icon: 'trend' })
+  }
+
+  const similarCount = similarIncidents(a, asOf, 30).filter((s) => s.score >= 0.6).length
+  const criteria = {
+    safety: Math.min(1, (PRE_RISK[inc?.preRisk ?? 'IV'] ?? 0.3) + (inc?.impact === 'Class A Eq. Breakdown' ? 0.1 : 0)),
+    prodLoss: Math.sqrt((a.rca?.impact.productionLossT ?? 0) / MAX_PROD),
+    financial: Math.sqrt((a.rca?.impact.lossK ?? 0) / MAX_LOSS),
+    critEquip: (CLASS[a.eqClass] ?? 0.3) * (a.criticality === 'High' ? 1 : 0.85),
+    degradation: h.phase === 'post-repair' ? 0.1 : Math.min(1, Math.max(p0?.index ?? 0, p0?.daysToTrip ? 1 - p0.daysToTrip / 120 : 0)),
+    recurrence: Math.min(1, similarCount / 15),
+  }
+
+  return {
+    id: a.tag,
+    equipment: a.name,
+    severity,
+    phase: h.phase,
+    criteria,
+    area: `${plantLabel(a.plant)} · ${a.type}`,
+    title,
+    signals,
+    status,
+    lead: inc?.pic ?? '—',
+    unitId: a.plant,
+    detectedAt: h.phase === 'post-repair' || h.phase === 'trip' ? a.failureDate : episodeStart(a, asOf),
+  }
+}
+
+/** Problem aktif = aset yang tidak sehat atau masih dalam eksekusi CAPA. */
+export function buildProblems(asOf: string) {
+  return assets.filter((a) => ['early-warning', 'alarm', 'trip', 'post-repair'].includes(assetHealth(a, asOf).phase)).map((a) => buildProblem(a, asOf))
+}
+
+/* ------------------------------------------------------------------ */
+
+export function urgentActionsAt(asOf: string): { items: UrgentAction[]; total: number; all: UrgentAction[] } {
+  const all = assets.flatMap((a) =>
+    openActionsOf(a, asOf).map((x): UrgentAction => {
+      const overdue = x.planDate < asOf
+      const days = daysBetween(asOf, x.planDate)
+      return {
+        problemId: a.tag,
+        planDate: x.planDate,
+        due: overdue
+          ? `${fmtDate(x.planDate, { day: '2-digit', month: 'short' })} (Overdue)`
+          : days <= 14
+            ? `In ${days}d`
+            : fmtDate(x.planDate, { day: '2-digit', month: 'short' }),
+        overdue,
+        task: x.text,
+        owner: x.pic,
+        status: overdue ? 'At Risk' : x.status === 'In Progress' ? 'In Progress' : days <= 30 ? 'Scheduled' : 'On Track',
+      }
+    }),
+  )
+  const rank = (u: UrgentAction) => (u.overdue ? 0 : u.status === 'In Progress' ? 1 : 2)
+  all.sort((x, y) => rank(x) - rank(y) || x.planDate.localeCompare(y.planDate))
+  return { items: all.slice(0, 4), total: all.length, all }
+}
+
+const STAGES = [
+  { key: 'NEW REGISTERED', label: 'New Registered' },
+  { key: 'RCA PROCESS', label: 'RCA Process' },
+  { key: 'CA/PA EXECUTION', label: 'CA/PA Execution' },
+  { key: 'MONITORING RESULT', label: 'Monitoring' },
+  { key: 'RISK CLOSED', label: 'Risk Closed' },
 ]
 
-export const urgentActions: UrgentAction[] = [
-  {
-    problemId: 'KO-3201',
-    due: 'Today (Overdue)',
-    overdue: true,
-    task: 'Perform oil moisture re-sample & run online vibration spectrum check',
-    owner: 'M. Irfan',
-    status: 'At Risk',
-  },
-  {
-    problemId: 'BL-5702',
-    due: 'Tomorrow',
-    task: 'Laser alignment check during planned turnaround shift window',
-    owner: 'B. Hendro',
-    status: 'Scheduled',
-  },
-  {
-    problemId: 'PU-2101B',
-    due: 'Today',
-    task: 'Switch duty to Standby Pump PU-2101A and inspect suction strainer',
-    owner: 'S. Widodo',
-    status: 'In Progress',
-  },
-  {
-    problemId: 'HE-3301',
-    due: 'In 2d',
-    task: 'Anti-fouling chemical dosing adjustment & skin temperature verification',
-    owner: 'Process Eng (Lead)',
-    status: 'On Track',
-  },
-]
-
-export const lifecycle: LifecycleStage[] = [
-  { key: 'detected', label: 'Detected', count: 2, state: 'done' },
-  { key: 'investigating', label: 'Investigating', count: 3, state: 'active' },
-  { key: 'diagnosis', label: 'Diagnosis', count: 1, state: 'pending' },
-  { key: 'validated', label: 'Validated', count: 1, state: 'pending' },
-  { key: 'action', label: 'Action', count: 4, state: 'pending' },
-  { key: 'verification', label: 'Verification', count: 2, state: 'pending' },
-  { key: 'closed', label: 'Closed', count: 14, state: 'closed' },
-]
-
-const units30d: UnitImpact[] = [
-  { id: 'U01', code: 'UNIT 01', name: 'Cracker Unit 1', downtimeH: 19, lossT: 1120 },
-  { id: 'U02', code: 'UNIT 02', name: 'Cracker Unit 2', downtimeH: 4, lossT: 210 },
-  { id: 'U03', code: 'UNIT 03', name: 'Polypropylene', downtimeH: 11, lossT: 490 },
-  { id: 'U04', code: 'UNIT 04', name: 'Polyethylene', downtimeH: 2, lossT: 140 },
-  { id: 'U05', code: 'UNIT 05', name: 'Aromatics/PyGas', downtimeH: 3, lossT: 230 },
-  { id: 'U06', code: 'UNIT 06', name: 'Offsite & Utilities', downtimeH: 2, lossT: 120 },
-]
-
-const rangeFactor: Record<TimeRange, number> = { '7d': 0.27, '30d': 1, '90d': 2.8 }
-
-export function unitImpact(range: TimeRange): UnitImpact[] {
-  const f = rangeFactor[range]
-  return units30d.map((u) => ({
-    ...u,
-    downtimeH: Math.max(1, Math.round(u.downtimeH * f)),
-    lossT: Math.round((u.lossT * f) / 10) * 10,
+export function lifecycleAt(asOf: string): LifecycleStage[] {
+  const counts = statusCounts(asOf)
+  const open = STAGES.slice(0, 4)
+  const busiest = open.reduce((m, s) => ((counts[s.key] ?? 0) > (counts[m.key] ?? 0) ? s : m), open[0])
+  return STAGES.map((s) => ({
+    key: s.key,
+    label: s.label,
+    count: counts[s.key] ?? 0,
+    state: s.key === 'RISK CLOSED' ? 'closed' : s.key === busiest.key ? 'active' : 'pending',
   }))
 }
 
-/** Batas downtime / loss per unit per 30 hari (dipakai sebagai garis threshold). */
-export function thresholds(range: TimeRange) {
-  const f = rangeFactor[range]
-  return { downtimeH: 10 * f, lossT: 600 * f }
+export function overviewKpi(asOf: string, range: TimeRange): Kpi {
+  const k = kpis(asOf, RANGE_DAYS[range])
+  const from = addDays(asOf, -28)
+  const rawAlerts = assets.reduce(
+    (n, a) =>
+      n +
+      a.history
+        .filter((r) => r.date > from && r.date <= asOf)
+        .reduce((m, r) => m + a.params.filter((p) => (p.direction === 'high' ? r.values[p.key] >= p.alarm : r.values[p.key] <= p.alarm)).length, 0),
+    0,
+  )
+  return {
+    availability: { value: k.availability },
+    downtime: { value: k.downtimeH, delta: k.downtimeDelta },
+    productionLoss: { value: k.productionLossT, delta: k.productionLossDelta },
+    financialExposure: { valueM: k.exposureK / 1000 },
+    incidents: k.incidents,
+    rawAlerts,
+  }
 }
 
-export const kpiByRange: Record<TimeRange, Kpi> = {
-  '7d': {
-    availability: { value: 95.8, delta: -0.4 },
-    downtime: { value: 11, delta: 3 },
-    productionLoss: { value: 640, delta: 95 },
-    financialExposure: { value: 0.6 },
-    rawAlerts: 21,
-  },
-  '30d': {
-    availability: { value: 96.4, delta: 0.2 },
-    downtime: { value: 41, delta: -4 },
-    productionLoss: { value: 2310, delta: 180 },
-    financialExposure: { value: 2.1 },
-    rawAlerts: 57,
-  },
-  '90d': {
-    availability: { value: 96.1, delta: -0.1 },
-    downtime: { value: 118, delta: -12 },
-    productionLoss: { value: 6480, delta: 410 },
-    financialExposure: { value: 5.9 },
-    rawAlerts: 163,
-  },
+/** Downtime & loss per plant (Incident DB), maksimal 6 kolom — plant dengan problem aktif selalu ikut. */
+export function plantImpactAt(asOf: string, range: TimeRange, problemPlants: string[]): UnitImpact[] {
+  const rows = plantImpact(asOf, RANGE_DAYS[range]).sort((x, y) => y.downtimeH - x.downtimeH)
+  const must = rows.filter((r) => problemPlants.includes(r.plant))
+  const missing = problemPlants.filter((p) => !rows.some((r) => r.plant === p)).map((plant) => ({ plant, downtimeH: 0, lossK: 0, count: 0 }))
+  const rest = rows.filter((r) => !problemPlants.includes(r.plant))
+  return [...must, ...missing, ...rest]
+    .slice(0, Math.max(6, must.length + missing.length))
+    .sort((x, y) => y.downtimeH - x.downtimeH)
+    .map((r) => ({ id: r.plant, code: r.plant, name: plantLabel(r.plant), downtimeH: r.downtimeH, lossK: r.lossK, incidents: r.count }))
 }
-
-export const currentUser = { name: 'Dr. Aris S.', role: 'Lead Reliability', notifications: 2 }

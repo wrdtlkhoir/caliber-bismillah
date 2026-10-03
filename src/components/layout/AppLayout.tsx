@@ -1,16 +1,12 @@
 import clsx from 'clsx'
 import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
-import { useSyncClock } from '@/lib/useSyncClock'
 import { BrandMark } from './BrandMark'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 
-export type LayoutContext = { syncLabel: string }
-
 export function AppLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const { label, syncing, sync } = useSyncClock()
 
   return (
     <div className="flex min-h-full">
@@ -41,10 +37,10 @@ export function AppLayout() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="sticky top-0 z-30">
-          <Topbar syncLabel={label} syncing={syncing} onSync={sync} onMenu={() => setMenuOpen(true)} />
+          <Topbar onMenu={() => setMenuOpen(true)} />
         </div>
         <main className="min-w-0 flex-1 overflow-x-clip px-4 pb-10 pt-6 lg:px-7">
-          <Outlet context={{ syncLabel: label } satisfies LayoutContext} />
+          <Outlet />
         </main>
       </div>
     </div>

@@ -1,18 +1,14 @@
 import clsx from 'clsx'
 import { Bell, ChevronRight, Menu, Search, User } from 'lucide-react'
 import { Fragment, useEffect, useRef } from 'react'
-import { useLocation, useMatches, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useMatches, useNavigate, useSearchParams } from 'react-router-dom'
 import type { RouteHandle } from '@/App'
-import { currentUser, problems } from '@/data/plant'
+import { assets } from '@/data/dataset'
+import { currentUser } from '@/data/plant'
+import { fmtDate, useAsOf } from '@/lib/asOf'
 
-interface Props {
-  syncLabel: string
-  syncing: boolean
-  onSync: () => void
-  onMenu: () => void
-}
-
-export function Topbar({ syncLabel, syncing, onSync, onMenu }: Props) {
+export function Topbar({ onMenu }: { onMenu: () => void }) {
+  const { asOf } = useAsOf()
   const { pathname } = useLocation()
   const [params, setParams] = useSearchParams()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -46,9 +42,9 @@ export function Topbar({ syncLabel, syncing, onSync, onMenu }: Props) {
   const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Escape') return setQ('')
     if (e.key !== 'Enter' || !q.trim()) return
-    const hit = problems.find((p) => p.id.toLowerCase() === q.trim().toLowerCase())
+    const hit = assets.find((a) => a.tag.toLowerCase() === q.trim().toLowerCase())
     if (hit) {
-      navigate(`/investigation/${hit.id}`)
+      navigate(`/investigation/${hit.tag}`)
       inputRef.current?.blur()
     } else if (pathname !== '/') {
       navigate(`/?q=${encodeURIComponent(q.trim())}`)
@@ -91,14 +87,14 @@ export function Topbar({ syncLabel, syncing, onSync, onMenu }: Props) {
         <kbd className="ml-2 hidden rounded border border-line bg-white px-1.5 font-mono text-[11px] text-ink-3 xl:block">/</kbd>
       </label>
 
-      <button
-        onClick={onSync}
-        title="Klik untuk sync manual"
+      <Link
+        to="/"
+        title="Dataset replay date — change it on Plant Intelligence"
         className="hidden shrink-0 items-center gap-2 rounded-full bg-good-soft px-3 py-1.5 font-mono text-[12.5px] text-good transition hover:brightness-95 sm:flex"
       >
-        <span className={`size-2 rounded-full bg-good ${syncing ? 'animate-ping' : 'animate-pulse-dot'}`} />
-        Real-time (Sync {syncLabel})
-      </button>
+        <span className="size-2 animate-pulse-dot rounded-full bg-good" />
+        Replay · {fmtDate(asOf)}
+      </Link>
 
       <div className="hidden h-8 w-px bg-line sm:block" />
 

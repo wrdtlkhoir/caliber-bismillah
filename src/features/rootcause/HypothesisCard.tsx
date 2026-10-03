@@ -1,7 +1,6 @@
 import clsx from 'clsx'
 import { BadgeCheck, CircleAlert, CircleCheck, Info, Radio, Check } from 'lucide-react'
 import { Mono } from '@/components/ui/Card'
-import { seriesOf, type TrendParam } from '@/data/investigation'
 import type { EvidenceStatus, Hypothesis } from '@/data/rootCause'
 import type { HypothesisDecision } from '@/lib/useDecision'
 
@@ -13,22 +12,21 @@ const STATUS_ROW: Record<EvidenceStatus, { icon: typeof CircleCheck; cls: string
   contradict: { icon: CircleAlert, cls: 'border-critical/20 bg-critical-soft text-critical', iconCls: 'text-critical' },
 }
 
-const PARAM_TEXT: Record<TrendParam['color'], string> = {
+const PARAM_TEXT = {
   critical: 'text-critical',
-  high: 'text-navy-900',
-  navy: 'text-ink',
-}
+  high: 'text-high',
+  neutral: 'text-ink',
+} as const
 
 interface Props {
   h: Hypothesis & { priority: number }
   rank: number
   selected: boolean
   decision?: HypothesisDecision
-  params: TrendParam[]
   onSelect: () => void
 }
 
-export function HypothesisCard({ h, rank, selected, decision, params, onSelect }: Props) {
+export function HypothesisCard({ h, rank, selected, decision, onSelect }: Props) {
   const rejected = decision === 'rejected'
   const accepted = decision === 'accepted'
 
@@ -107,27 +105,22 @@ export function HypothesisCard({ h, rank, selected, decision, params, onSelect }
             })}
           </ul>
 
-          {h.correlatedParams && (
+          {h.correlated && h.correlated.length > 0 && (
             <div className="mt-2 rounded-lg bg-info-soft/60 px-4 py-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="flex items-center gap-2 font-mono text-[12.5px] text-ink-2">
                   <Radio className="size-4 text-navy-700" />
-                  Correlated tags:
+                  Signals at failure:
                 </span>
-                {h.correlatedParams.map((key) => {
-                  const p = params.find((x) => x.key === key)
-                  if (!p) return null
-                  const s = seriesOf(p)
-                  return (
-                    <Mono key={key} className={clsx('rounded-md bg-surface px-2.5 py-1 text-[12.5px] font-semibold', PARAM_TEXT[p.color])}>
-                      {p.tag} ({s[s.length - 1].toFixed(p.digits)} {p.unit})
-                    </Mono>
-                  )
-                })}
+                {h.correlated.map((c) => (
+                  <Mono key={c.label} className={clsx('rounded-md bg-surface px-2.5 py-1 text-[12.5px] font-semibold', PARAM_TEXT[c.tone])}>
+                    {c.label} ({c.value})
+                  </Mono>
+                ))}
               </div>
               {h.causalLoopValidated && (
                 <p className="mt-2 flex items-center gap-1.5 text-[13.5px] text-good">
-                  <span className="size-1.5 rounded-full bg-good" /> Full Causal Loop Validated
+                  <span className="size-1.5 rounded-full bg-good" /> Causal loop verified in RCA (4P + 4M+1E)
                 </p>
               )}
             </div>

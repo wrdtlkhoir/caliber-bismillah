@@ -1,11 +1,10 @@
-export type Severity = 'critical' | 'high' | 'medium'
-export type TimeRange = '7d' | '30d' | '90d'
+import type { Phase } from '@/lib/analytics'
 
-export type ProblemStatus =
-  | 'Investigating'
-  | 'Diagnosis Pending'
-  | 'Action in Progress'
-  | 'Validated'
+export type Severity = 'critical' | 'high' | 'medium'
+/** Jendela agregasi KPI & chart, berakhir di tanggal "as of". */
+export type TimeRange = '90d' | '180d' | '365d'
+
+export type ProblemStatus = 'Early Warning' | 'Investigating' | 'RCA in Progress' | 'CA/PA Execution' | 'Monitoring'
 
 export type SignalTone = 'critical' | 'high' | 'medium' | 'neutral'
 export type SignalIcon = 'alert' | 'drop' | 'trend' | 'gauge' | 'temp' | 'check' | 'down' | 'wave' | 'diff'
@@ -16,7 +15,7 @@ export interface Signal {
   icon?: SignalIcon
 }
 
-/** Skor kriteria 0–1 untuk perhitungan AHP */
+/** Skor kriteria 0–1 untuk perhitungan AHP prioritas problem */
 export interface CriteriaScores {
   safety: number
   prodLoss: number
@@ -30,12 +29,14 @@ export interface Problem {
   id: string
   equipment: string
   severity: Severity
+  phase: Phase
   criteria: CriteriaScores
   area: string
   title: string
   signals: Signal[]
   status: ProblemStatus
   lead: string
+  /** kode plant (ZCU, ARP, ...) */
   unitId: string
   detectedAt: string
 }
@@ -44,6 +45,7 @@ export type ActionStatus = 'At Risk' | 'Scheduled' | 'In Progress' | 'On Track'
 
 export interface UrgentAction {
   problemId: string
+  planDate: string
   due: string
   overdue?: boolean
   task: string
@@ -56,14 +58,16 @@ export interface UnitImpact {
   code: string
   name: string
   downtimeH: number
-  lossT: number
+  lossK: number
+  incidents: number
 }
 
 export interface Kpi {
-  availability: { value: number; delta: number }
+  availability: { value: number }
   downtime: { value: number; delta: number }
   productionLoss: { value: number; delta: number }
-  financialExposure: { value: number }
+  financialExposure: { valueM: number }
+  incidents: number
   rawAlerts: number
 }
 

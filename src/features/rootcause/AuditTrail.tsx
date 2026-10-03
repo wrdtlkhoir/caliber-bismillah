@@ -18,7 +18,7 @@ export function AuditTrail({ entries, eventNo, unitLabel }: { entries: AuditEntr
           <History className="size-5 text-ink-2" /> Decision Audit Trail
         </h2>
         <Mono className="text-[13px] text-ink-2">
-          {unitLabel} Event {eventNo}
+          {unitLabel} · {eventNo}
         </Mono>
       </header>
       <ol className="mt-4 space-y-4">
@@ -27,7 +27,7 @@ export function AuditTrail({ entries, eventNo, unitLabel }: { entries: AuditEntr
             {i < entries.length - 1 && <span className="absolute left-[5px] top-4 h-[calc(100%+4px)] w-px bg-line" aria-hidden />}
             <span className={clsx('absolute left-0 top-1.5 size-[11px] rounded-full', ACTOR[e.actor].dot)} />
             <div className="flex items-center justify-between gap-2">
-              <Mono className="text-[13px] text-ink-2">{e.time} WIB</Mono>
+              <Mono className="text-[13px] text-ink-2">{e.time}{e.time.includes(':') ? ' WIB' : ''}</Mono>
               <span className={clsx('rounded px-1.5 py-0.5 text-[12.5px] font-medium', ACTOR[e.actor].pill)}>{e.actor}</span>
             </div>
             <p className="mt-1 text-[14px] leading-snug text-ink">{e.text}</p>

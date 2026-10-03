@@ -22,29 +22,33 @@ const STATUS: Record<ActionStatus, string> = {
 }
 
 export const initials = (name: string) =>
-  name
-    .replace(/[^A-Za-z. ]/g, '')
-    .split(/[ .]+/)
-    .filter(Boolean)
-    .map((w) => w[0].toUpperCase())
-    .slice(0, 2)
-    .join('')
+  /^[A-Z]{3}-\d+$/.test(name)
+    ? `${name[0]}${name.slice(-1)}` // kode PIC, mis. REL-05 → R5
+    : name
+        .replace(/[^A-Za-z. ]/g, '')
+        .split(/[ .]+/)
+        .filter(Boolean)
+        .map((w) => w[0].toUpperCase())
+        .slice(0, 2)
+        .join('')
 
 export function formatDue(iso: string) {
   return new Date(`${iso}T00:00:00+07:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Jakarta' })
 }
 
-function isOverdue(a: CapaAction) {
-  return a.status !== 'Done' && new Date(`${a.due}T23:59:59+07:00`) < new Date()
+function isOverdue(a: CapaAction, refDate: string) {
+  return a.status !== 'Done' && a.due < refDate
 }
 
 interface Props {
   actions: CapaAction[]
   highlightId: string | null
   onStatus: (id: string, status: ActionStatus) => void
+  /** tanggal acuan overdue (tanggal replay) */
+  refDate: string
 }
 
-export function CapaTable({ actions, highlightId, onStatus }: Props) {
+export function CapaTable({ actions, highlightId, onStatus, refDate }: Props) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[700px] 2xl:min-w-[980px] text-left">
@@ -72,11 +76,8 @@ export function CapaTable({ actions, highlightId, onStatus }: Props) {
                   {a.title}
                 </p>
                 <Mono className={clsx('mt-1 block text-[12.5px]', a.type === 'Preventive' ? 'text-teal' : 'text-ink-2')}>
-                  {a.ref} · {a.team}
+                  {a.ref}
                 </Mono>
-                <p className="mt-1.5 text-[12.5px] text-ink-2 2xl:hidden">
-                  <span className="font-medium text-ink">Verify:</span> {a.criteria}
-                </p>
               </td>
               <td className="px-3 py-4">
                 <span className={clsx('rounded px-2 py-0.5 text-[14px]', TYPE[a.type])}>{a.type}</span>
@@ -88,8 +89,8 @@ export function CapaTable({ actions, highlightId, onStatus }: Props) {
                 </span>
               </td>
               <td className="whitespace-nowrap px-3 py-4">
-                <Mono className={clsx('text-[13.5px]', isOverdue(a) ? 'font-semibold text-critical' : 'text-ink')}>{formatDue(a.due)}</Mono>
-                {isOverdue(a) && <span className="block text-[12px] text-critical">Overdue</span>}
+                <Mono className={clsx('text-[13.5px]', isOverdue(a, refDate) ? 'font-semibold text-critical' : 'text-ink')}>{formatDue(a.due)}</Mono>
+                {isOverdue(a, refDate) && <span className="block text-[12px] text-critical">Overdue</span>}
               </td>
               <td className="px-3 py-4">
                 <span className={clsx('rounded px-2 py-0.5 text-[14px]', PRIORITY[a.priority])}>{a.priority}</span>

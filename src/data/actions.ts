@@ -1,8 +1,12 @@
 /**
- * Mock data Action & Reliability Loop (Page 4).
- * Di produksi: work order dari SAP PM, CAPA register, dan telemetry pasca-perbaikan.
+ * Builder data Page 4 (Action & Reliability Loop) dari laporan RCA (CAPA, PM, risk)
+ * + history kondisi sebelum/sesudah perbaikan + Incident Database.
  */
-import type { TrendSpec } from '@/lib/series'
+import { baseline, componentFamily, median, OPEN_STATUSES } from '@/lib/analytics'
+import { addDays, daysBetween, fmtDate } from '@/lib/asOf'
+import { incidentOf, incidents, assets, type Asset, type RcaReport } from './dataset'
+import { fmtValue } from './plant'
+import { buildRootCause } from './rootCause'
 
 export type ActionType = 'Corrective' | 'Preventive' | 'Proactive'
 export type ActionPriority = 'Critical' | 'High' | 'Medium'
@@ -29,10 +33,13 @@ export interface FleetItem {
 }
 
 export interface ActionCase {
-  problemId: string
+  asset: Asset
+  rca: RcaReport
   contextCycle: string
   criticality: string
   conditionText: string
+  restored: boolean
+  preFailure: boolean
   validation: { id: string; rootCause: string; by: string; at: string }
   kpis: {
     effectiveness: { value: number; delta: string; benchmark: string }
@@ -43,220 +50,204 @@ export interface ActionCase {
   actions: CapaAction[]
   verification: {
     title: string
-    tag: string
     unit: string
     digits: number
-    trip?: number
+    trip: number
     alarm: number
     alarmDir: 'high' | 'low'
     normal: [number, number]
-    startLabel: string
-    eventLabel?: string
-    before: TrendSpec
-    after?: TrendSpec
+    before: { date: string; value: number }[]
+    after: { date: string; value: number }[]
+    eventLabel: string
     checks: { state: 'done' | 'pending'; title: string; text: string; mono?: boolean }[]
   }
-  /** index action (0-based) yang menjadi penyebab sistemik masih terbuka */
   systemicActionIndex?: number
   systemicText?: string
   fleet: { intro: string; items: FleetItem[] }
 }
 
-export const actionCases: Record<string, ActionCase> = {
-  'KO-3201': {
-    problemId: 'KO-3201',
-    contextCycle: 'INC-2026-3201-B',
-    criticality: 'Class A criticality',
-    conditionText: 'Restored / Stable (Load 94%)',
+const STATUS: Record<string, ActionStatus> = { Closed: 'Done', 'In Progress': 'In progress', Open: 'Not started' }
+const TYPE: Record<string, ActionType> = { corrective: 'Corrective', proactive: 'Proactive', preventive: 'Preventive' }
+
+/** Ekspansi "KO-3202/3203" → ["KO-3202", "KO-3203"] */
+function tagsIn(text: string) {
+  const out: string[] = []
+  for (const m of text.matchAll(/([A-Z]{2})-(\d{4}[A-Z]?)((?:\/\d{4}[A-Z]?)*)/g)) {
+    out.push(`${m[1]}-${m[2]}`)
+    m[3]
+      .split('/')
+      .filter(Boolean)
+      .forEach((n) => out.push(`${m[1]}-${n}`))
+  }
+  return out
+}
+
+function capaKpis(a: Asset, asOf: string): ActionCase['kpis'] {
+  const known = incidents.filter((i) => i.date <= asOf)
+  const closureRate = (xs: typeof known) => {
+    const past = xs.filter((i) => ['RISK CLOSED', 'CA/PA EXECUTION', 'MONITORING RESULT'].includes(i.status))
+    return past.length ? (100 * past.filter((i) => i.status === 'RISK CLOSED').length) / past.length : 0
+  }
+  const lastYear = known.filter((i) => i.date > addDays(asOf, -365))
+  const prevYear = known.filter((i) => i.date <= addDays(asOf, -365) && i.date > addDays(asOf, -730))
+  const rate = closureRate(lastYear.length ? lastYear : known)
+  const prev = closureRate(prevYear)
+
+  const leadOf = (x: Asset) => x.rca!.actions.filter((c) => c.kind === 'corrective').map((c) => daysBetween(x.rca!.dateOccurrence, c.planDate))
+  const fleet = median(assets.filter((x) => x.rca).flatMap(leadOf))
+  const mine = median(leadOf(a))
+
+  const key = (i: (typeof known)[number]) => `${i.plant}|${i.eqType}|${componentFamily(i.component)}`
+  const repeats = known.filter((i) => known.some((j) => j !== i && key(j) === key(i) && j.date < i.date && daysBetween(j.date, i.date) <= 365))
+  const repeatPct = known.length ? (100 * repeats.length) / known.length : 0
+
+  const monitoring = known.filter((i) => i.status === 'MONITORING RESULT')
+  return {
+    effectiveness: { value: Math.round(rate), delta: `${rate - prev >= 0 ? '+' : ''}${(rate - prev).toFixed(1)} pp`, benchmark: 'vs prior 12 m' },
+    closure: { value: mine, delta: `${mine - fleet >= 0 ? '+' : ''}${(mine - fleet).toFixed(0)}d`, benchmark: `Median of 5 RCA cases: ${fleet.toFixed(0)} d` },
+    repeat: { value: Math.round(repeatPct), badge: `${repeats.length} cases`, benchmark: 'Same plant · eq. type · component ≤ 12 m' },
+    awaiting: { value: monitoring.length, note: `${monitoring.filter((i) => i.plant === a.plant).length} in ${a.plant} · status MONITORING RESULT` },
+  }
+}
+
+export function buildActionCase(a: Asset, asOf: string): ActionCase | null {
+  const rca = a.rca
+  if (!rca) return null
+  const own = incidentOf(a)
+  const priority = new Set(rca.priorityRootCauses)
+  const findRow = (rc: string) => [...rca.parameterVerification, ...rca.fourMVerification].find((v) => v.id === rc)
+
+  const counters: Record<string, number> = {}
+  const actions: CapaAction[] = rca.actions.map((x) => {
+    counters[x.kind] = (counters[x.kind] ?? 0) + 1
+    const row = findRow(x.rc)
+    return {
+      id: `${x.kind[0].toUpperCase()}${counters[x.kind]}`,
+      title: x.text,
+      ref: `${x.rc} · ${row?.item ?? x.cause ?? ''}`,
+      team: x.pic,
+      type: TYPE[x.kind],
+      owner: x.pic,
+      due: x.planDate,
+      priority: x.kind === 'corrective' ? (priority.has(x.rc) ? 'Critical' : 'High') : x.kind === 'preventive' && priority.has(x.rc) ? 'High' : 'Medium',
+      status: x.status ? STATUS[x.status] : 'Not started',
+      criteria: x.kind === 'corrective' ? rca.targetCondition : x.kind === 'preventive' ? `Prevents: ${x.cause ?? row?.item}` : 'Roll-out verified on similar equipment',
+    }
+  })
+
+  // ---- Verification: parameter dengan degradasi terbesar saat trip
+  const tripRow = a.history.find((h) => h.status === 'TRIP')
+  const vp =
+    a.params
+      .map((p) => {
+        const b = baseline(a, p)
+        return { p, b, idx: tripRow ? (tripRow.values[p.key] - b.mean) / (p.trip - b.mean || 1) : 0 }
+      })
+      .sort((x, y) => y.idx - x.idx)[0] ?? null
+  const before = a.history.filter((h) => h.date <= a.failureDate).map((h) => ({ date: h.date, value: h.values[vp.p.key] }))
+  const after = a.history.filter((h) => h.date > a.failureDate).map((h) => ({ date: h.date, value: h.values[vp.p.key] }))
+  const afterRows = a.history.filter((h) => h.date > a.failureDate)
+  const firstAfter = after[0]
+  const normalized = !!firstAfter && firstAfter.value >= vp.b.band[0] - Math.abs(vp.b.band[0]) * 0.05 && firstAfter.value <= vp.b.band[1] * 1.05
+  const allNormal = afterRows.every((h) => h.status === 'NORMAL')
+  const closedCorrective = rca.actions.filter((x) => x.kind === 'corrective' && x.status === 'Closed')
+
+  const checks: ActionCase['verification']['checks'] = [
+    {
+      state: closedCorrective.length ? 'done' : 'pending',
+      title: closedCorrective.length ? 'Immediate repair completed' : 'Immediate repair',
+      text: rca.immediateAction,
+    },
+    {
+      state: normalized ? 'done' : 'pending',
+      title: normalized ? 'Condition normalized' : 'Condition not yet normalized',
+      text: firstAfter
+        ? `${vp.p.label} ${fmtValue(vp.p, firstAfter.value)} ${vp.p.unit} on ${fmtDate(firstAfter.date, { day: '2-digit', month: 'short' })} (baseline ${fmtValue(vp.p, vp.b.band[0])}–${fmtValue(vp.p, vp.b.band[1])})`
+        : 'No post-repair reading yet',
+      mono: true,
+    },
+    {
+      state: allNormal && afterRows.length >= 8 ? 'done' : 'pending',
+      title: `Recurrence watch — ${afterRows.length} week${afterRows.length === 1 ? '' : 's'} ${allNormal ? 'NORMAL' : 'with alerts'}`,
+      text: `Target: ${rca.targetCondition}`,
+    },
+  ]
+
+  // ---- Systemic cause = action 4M+1E (X) yang belum selesai
+  const sysIdx = actions.findIndex((x, i) => rca.actions[i].rc.startsWith('X') && x.status !== 'Done')
+  const sysRow = sysIdx >= 0 ? findRow(rca.actions[sysIdx].rc) : undefined
+  const systemicText =
+    sysIdx >= 0 && sysRow
+      ? `The failed component was repaired, but the system cause ${sysRow.id} — "${sysRow.item}" (${sysRow.evidence.replace(/\.$/, '')}) — is still open until "${actions[sysIdx].title}" is completed.`
+      : undefined
+
+  // ---- Fleet vulnerability
+  const proactive = rca.actions.filter((x) => x.kind === 'proactive')
+  const named = [...new Set(proactive.flatMap((x) => tagsIn(x.text)))].filter((t) => t !== a.tag)
+  const peers = own
+    ? [
+        ...new Map(
+          incidents
+            .filter((i) => i.tag !== a.tag && i.eqType === own.eqType && i.plant === own.plant)
+            .sort((x, y) => y.totalLossK - x.totalLossK)
+            .map((i) => [i.tag, i] as const),
+        ).values(),
+      ].slice(0, 3)
+    : []
+  const items: FleetItem[] = [
+    ...named.map((t) => {
+      const hist = incidents.filter((i) => i.tag === t)
+      return { id: t, name: 'Named in pro-active action', level: hist.length ? 'ELEVATED' : 'MODERATE', note: hist.length ? `${hist.length} incidents on record` : 'Same design — roll-out planned' } as FleetItem
+    }),
+    ...peers
+      .filter((i) => !named.includes(i.tag))
+      .map(
+        (i): FleetItem => ({
+          id: i.tag,
+          name: `${i.component} · ${i.title.replace(`${i.tag} `, '')}`,
+          level: OPEN_STATUSES.has(i.status) && i.riskScore >= 400 ? 'ELEVATED' : OPEN_STATUSES.has(i.status) ? 'MODERATE' : 'MONITORING',
+          note: `$${Math.round(i.totalLossK).toLocaleString('en-US')}k loss · ${i.status}`,
+        }),
+      ),
+  ].slice(0, 4)
+
+  const rc = buildRootCause(a, asOf)
+  const preFailure = asOf < a.failureDate
+
+  return {
+    asset: a,
+    rca,
+    contextCycle: own?.mto ?? rca.arNo,
+    criticality: `Class ${a.eqClass} · ${a.criticality} criticality`,
+    conditionText: preFailure ? 'Pre-failure (replay date)' : after.length ? (normalized ? 'Restored / Normal after repair' : 'Restarted / under watch') : 'Under repair',
+    restored: after.length > 0 && normalized,
+    preFailure,
     validation: {
-      id: 'VAL-KO3201-0812',
-      rootCause: 'Lube oil water ingress via cooler leak (E-3204 tube sheet)',
-      by: 'R. Gunawan (Lead Reliability)',
-      at: '02 Oct 13:10 WIB',
+      id: rca.arNo,
+      rootCause: rc?.hypotheses[0].title ?? rca.rootCause,
+      by: `${own?.pic ?? '—'} (RCA PIC)`,
+      at: fmtDate(rca.dateReported),
     },
-    kpis: {
-      effectiveness: { value: 82, delta: '+4.2%', benchmark: 'vs 80%' },
-      closure: { value: 6.2, delta: '-1.8d', benchmark: 'Median fleet benchmark: 8.0d' },
-      repeat: { value: 4, badge: 'Top Decile', benchmark: 'Industry Benchmark: 7%' },
-      awaiting: { value: 5, note: '2 for Unit 32 this week' },
-    },
-    actions: [
-      {
-        id: 'A1', title: 'Isolate & repair lube-oil cooler E-3204 tube bundle', ref: 'WO-2026-9921', team: 'Maint Mech',
-        type: 'Corrective', owner: 'M. Irfan', due: '2026-10-03', priority: 'Critical', status: 'Done',
-        criteria: 'Water < 200 ppm after bundle leak test',
-      },
-      {
-        id: 'A2', title: 'Replace lube oil charge & flush console piping system', ref: 'WO-2026-9924', team: 'Lube Ops',
-        type: 'Corrective', owner: 'S. Widodo', due: '2026-10-03', priority: 'High', status: 'Done',
-        criteria: 'Water < 200 ppm, ISO 4406 cleanliness 16/14/11',
-      },
-      {
-        id: 'A3', title: 'Install online water-in-oil transmitter (AI-3204_H2O)', ref: 'CAPEX-32-118', team: 'Instrumentation',
-        type: 'Preventive', owner: 'F. Ramadhan', due: '2026-10-20', priority: 'High', status: 'In progress',
-        criteria: 'Live telemetry streaming to CALIBER platform',
-      },
-      {
-        id: 'A4', title: 'Review cooler tube integrity across all Class-A turbomachinery', ref: 'FLEET-AUDIT-04', team: 'Reliability',
-        type: 'Proactive', owner: 'R. Gunawan', due: '2026-10-31', priority: 'Medium', status: 'Not started',
-        criteria: 'NDT / eddy current inspection reports submitted',
-      },
-    ],
+    kpis: capaKpis(a, asOf),
+    actions,
     verification: {
-      title: 'Radial Vibration (Drive End)',
-      tag: 'VIB-3201-RDE (mm/s RMS)',
-      unit: 'mm/s',
-      digits: 1,
-      trip: 11,
-      alarm: 7,
-      alarmDir: 'high',
-      normal: [3, 5],
-      startLabel: '01 Oct',
-      eventLabel: '03 Oct Maint. Complete',
-      before: { start: 5.2, end: 11.2, shape: 'sigmoid', knee: 0.55, noise: 0.02, seed: 81, points: 34 },
-      after: { start: 4.2, end: 3.8, shape: 'sigmoid', knee: 0.2, noise: 0.04, seed: 82, points: 22 },
-      checks: [
-        { state: 'done', title: 'Action completed', text: 'Cooler bundle re-tubed & leak tested' },
-        { state: 'done', title: 'Condition normalized', text: 'Vibration 3.8 mm/s, Water 140 ppm (Nominal)', mono: true },
-        { state: 'pending', title: 'Recurrence after 30 days — Pending', text: 'Continuous telemetry monitoring active until 02 Nov 2026' },
-      ],
+      title: vp.p.label,
+      unit: vp.p.unit,
+      digits: Math.abs(vp.p.alarm) < 2 ? 3 : Math.abs(vp.p.alarm) < 20 ? 2 : 1,
+      trip: vp.p.trip,
+      alarm: vp.p.alarm,
+      alarmDir: vp.p.direction,
+      normal: vp.b.band,
+      before,
+      after,
+      eventLabel: `${fmtDate(a.failureDate, { day: '2-digit', month: 'short' })} failure & repair`,
+      checks,
     },
-    systemicActionIndex: 2,
-    systemicText:
-      'Temporary repair resolved acute water contamination, but real-time water ingress telemetry (Action #3) is not yet commissioned. Risk of undetected recurrence during monsoon season.',
+    systemicActionIndex: sysIdx >= 0 ? sysIdx : undefined,
+    systemicText,
     fleet: {
-      intro: '3 similar Class-A compressors in Olefins & Polyolefins share the identical shell-and-tube cooler design (E-3204 model series).',
-      items: [
-        { id: 'KO-3202', name: 'C2 Splitter Overhead Comp', level: 'ELEVATED', note: 'Cooler age 4.2 yr' },
-        { id: 'KO-3401', name: 'Ethylene Refrigeration Comp', level: 'MODERATE', note: 'Cooler age 2.8 yr' },
-        { id: 'KO-3501', name: 'Propylene Refrigeration Comp', level: 'MONITORING', note: 'Cooler age 1.5 yr' },
-      ],
+      intro: proactive.length ? `Pro-active roll-out in ${rca.arNo}: ${proactive.map((x) => x.text).join('; ')}.` : `Peers of the same equipment type in ${a.plant}.`,
+      items,
     },
-  },
-
-  'BL-5702': {
-    problemId: 'BL-5702',
-    contextCycle: 'INC-2026-5702-A',
-    criticality: 'Class B criticality',
-    conditionText: 'Running / Degraded (Load 96%)',
-    validation: { id: 'VAL-BL5702-0930', rootCause: 'Angular shaft misalignment at motor–blower coupling', by: 'T. Wardhana (Reliability)', at: '30 Sep 16:05 WIB' },
-    kpis: {
-      effectiveness: { value: 82, delta: '+4.2%', benchmark: 'vs 80%' },
-      closure: { value: 6.2, delta: '-1.8d', benchmark: 'Median fleet benchmark: 8.0d' },
-      repeat: { value: 4, badge: 'Top Decile', benchmark: 'Industry Benchmark: 7%' },
-      awaiting: { value: 5, note: '1 for PP Plant this week' },
-    },
-    actions: [
-      { id: 'A1', title: 'Laser alignment check during turnaround shift window', ref: 'WO-2026-9930', team: 'Maint Mech', type: 'Corrective', owner: 'B. Hendro', due: '2026-10-04', priority: 'High', status: 'In progress', criteria: '2X vibration < 4.5 mm/s after alignment' },
-      { id: 'A2', title: 'Inspect & replace coupling elastomer elements', ref: 'WO-2026-9931', team: 'Maint Mech', type: 'Corrective', owner: 'B. Hendro', due: '2026-10-04', priority: 'Medium', status: 'Not started', criteria: 'Coupling temp < 70 °C' },
-      { id: 'A3', title: 'Add post-maintenance alignment check to PM routine', ref: 'PM-REV-5702', team: 'Reliability', type: 'Preventive', owner: 'T. Wardhana', due: '2026-10-15', priority: 'Medium', status: 'Not started', criteria: 'PM task list updated in SAP' },
-    ],
-    verification: {
-      title: 'Vibration 2X (Motor DE)', tag: 'VI-5702A (mm/s RMS)', unit: 'mm/s', digits: 1, trip: 11, alarm: 7.1, alarmDir: 'high', normal: [1.5, 4.5],
-      startLabel: '27 Sep',
-      before: { start: 4.8, end: 7.8, shape: 'sigmoid', knee: 0.5, noise: 0.03, seed: 83, points: 40 },
-      checks: [
-        { state: 'pending', title: 'Action in progress', text: 'Laser alignment scheduled for tomorrow' },
-        { state: 'pending', title: 'Condition not yet normalized', text: 'Vibration 2X 7.8 mm/s (above alarm)', mono: true },
-      ],
-    },
-    systemicActionIndex: 2,
-    systemicText: 'Alignment will fix the symptom, but the post-maintenance check that would have caught it is not yet in the PM routine.',
-    fleet: { intro: '2 blowers in the PP extrusion train share the same coupling design.', items: [
-      { id: 'BL-5701', name: 'Extruder Blower A', level: 'MODERATE', note: 'Last alignment 14 mo ago' },
-      { id: 'BL-5801', name: 'Pelletizer Blower', level: 'MONITORING', note: 'Last alignment 5 mo ago' },
-    ] },
-  },
-
-  'PU-2101B': {
-    problemId: 'PU-2101B',
-    contextCycle: 'INC-2026-2101-C',
-    criticality: 'Class B criticality',
-    conditionText: 'Standby / Duty on PU-2101A',
-    validation: { id: 'VAL-PU2101-0930', rootCause: 'Suction strainer blockage (polymer fines)', by: 'M. Faisal (Reliability)', at: '30 Sep 09:40 WIB' },
-    kpis: {
-      effectiveness: { value: 82, delta: '+4.2%', benchmark: 'vs 80%' },
-      closure: { value: 6.2, delta: '-1.8d', benchmark: 'Median fleet benchmark: 8.0d' },
-      repeat: { value: 4, badge: 'Top Decile', benchmark: 'Industry Benchmark: 7%' },
-      awaiting: { value: 5, note: '1 for Tank Farm this week' },
-    },
-    actions: [
-      { id: 'A1', title: 'Switch duty to standby pump PU-2101A', ref: 'OP-2026-0412', team: 'Operations', type: 'Corrective', owner: 'S. Widodo', due: '2026-09-30', priority: 'Critical', status: 'Done', criteria: 'Suction pressure > 2.2 bar on duty pump' },
-      { id: 'A2', title: 'Clean suction strainer of PU-2101B', ref: 'WO-2026-9905', team: 'Maint Mech', type: 'Corrective', owner: 'S. Widodo', due: '2026-10-03', priority: 'High', status: 'In progress', criteria: 'Strainer dP < 0.2 bar' },
-      { id: 'A3', title: 'Add strainer dP alarm at 0.3 bar', ref: 'MOC-2026-077', team: 'Instrumentation', type: 'Preventive', owner: 'F. Ramadhan', due: '2026-10-12', priority: 'Medium', status: 'Not started', criteria: 'Alarm configured & tested in DCS' },
-    ],
-    verification: {
-      title: 'Suction Pressure (duty pump)', tag: 'PI-2101 (bar)', unit: 'bar', digits: 1, alarm: 1.5, alarmDir: 'low', normal: [2.2, 2.6],
-      startLabel: '29 Sep', eventLabel: '30 Sep Switch to A',
-      before: { start: 2.4, end: 1.1, shape: 'sigmoid', knee: 0.55, noise: 0.03, seed: 84, points: 30 },
-      after: { start: 2.2, end: 2.4, shape: 'sigmoid', knee: 0.2, noise: 0.02, seed: 85, points: 26 },
-      checks: [
-        { state: 'done', title: 'Duty switched', text: 'PU-2101A running normally' },
-        { state: 'done', title: 'Condition normalized', text: 'Suction 2.4 bar, acoustic baseline', mono: true },
-        { state: 'pending', title: 'PU-2101B return to service — Pending', text: 'After strainer cleaning' },
-      ],
-    },
-    systemicActionIndex: 2,
-    systemicText: 'Duty switch restored transfer, but without a strainer dP alarm the next blockage will again only be detected by cavitation.',
-    fleet: { intro: '4 transfer pumps in the tank farm use the same basket strainer.', items: [
-      { id: 'PU-2102A', name: 'Ethylene Transfer Pump 2A', level: 'ELEVATED', note: 'Strainer dP 0.31 bar' },
-      { id: 'PU-2102B', name: 'Ethylene Transfer Pump 2B', level: 'MONITORING', note: 'Strainer dP 0.12 bar' },
-    ] },
-  },
-
-  'HE-3301': {
-    problemId: 'HE-3301',
-    contextCycle: 'INC-2026-3301-A',
-    criticality: 'Class B criticality',
-    conditionText: 'Running / Fouling (Duty 82%)',
-    validation: { id: 'VAL-HE3301-0925', rootCause: 'Tube-side polymer fouling from anti-foulant under-dosing', by: 'D. Pratama (Process)', at: '25 Sep 10:15 WIB' },
-    kpis: {
-      effectiveness: { value: 82, delta: '+4.2%', benchmark: 'vs 80%' },
-      closure: { value: 6.2, delta: '-1.8d', benchmark: 'Median fleet benchmark: 8.0d' },
-      repeat: { value: 4, badge: 'Top Decile', benchmark: 'Industry Benchmark: 7%' },
-      awaiting: { value: 5, note: '1 for PyGas this week' },
-    },
-    actions: [
-      { id: 'A1', title: 'Adjust anti-foulant dosing ratio to diene content', ref: 'MOC-2026-081', team: 'Process Eng', type: 'Corrective', owner: 'D. Pratama', due: '2026-10-05', priority: 'High', status: 'In progress', criteria: 'dP growth < 0.02 bar/day' },
-      { id: 'A2', title: 'Schedule hydro-jet cleaning at next opportunity', ref: 'WO-2026-9950', team: 'Maint Static', type: 'Corrective', owner: 'H. Santoso', due: '2026-11-10', priority: 'Medium', status: 'Not started', criteria: 'dP back to 0.9 bar clean' },
-    ],
-    verification: {
-      title: 'Tube-side dP', tag: 'PDI-3301 (bar)', unit: 'bar', digits: 2, alarm: 2.2, alarmDir: 'high', normal: [0.8, 1.0],
-      startLabel: '12 Sep',
-      before: { start: 0.9, end: 1.85, shape: 'linear', noise: 0.03, seed: 86, points: 42 },
-      checks: [{ state: 'pending', title: 'Dosing adjustment in progress', text: 'Verification after 7 days of new ratio' }],
-    },
-    fleet: { intro: '1 sister exchanger shares the same service.', items: [{ id: 'HE-3302', name: 'PyGas Exchanger B', level: 'MODERATE', note: 'dP 1.2 bar' }] },
-  },
-
-  'PM-4405B': {
-    problemId: 'PM-4405B',
-    contextCycle: 'INC-2026-4405-A',
-    criticality: 'Class B criticality',
-    conditionText: 'Running / Watch (Load 100%)',
-    validation: { id: 'VAL-PM4405-0915', rootCause: 'Grease degradation — re-greasing interval exceeded', by: 'H. Santoso (Reliability)', at: '15 Sep 14:00 WIB' },
-    kpis: {
-      effectiveness: { value: 82, delta: '+4.2%', benchmark: 'vs 80%' },
-      closure: { value: 6.2, delta: '-1.8d', benchmark: 'Median fleet benchmark: 8.0d' },
-      repeat: { value: 4, badge: 'Top Decile', benchmark: 'Industry Benchmark: 7%' },
-      awaiting: { value: 5, note: '1 for Utilities this week' },
-    },
-    actions: [
-      { id: 'A1', title: 'Take grease sample from DE bearing', ref: 'LAB-2026-4405', team: 'Lube Ops', type: 'Corrective', owner: 'S. Widodo', due: '2026-10-04', priority: 'High', status: 'Not started', criteria: 'Lab result uploaded to LIMS' },
-      { id: 'A2', title: 'Re-grease DE bearing per OEM quantity', ref: 'WO-2026-9960', team: 'Lube Ops', type: 'Corrective', owner: 'S. Widodo', due: '2026-10-05', priority: 'High', status: 'Not started', criteria: 'Bearing temp < 75 °C within 48 h' },
-      { id: 'A3', title: 'Install single-point auto-lubricator', ref: 'CAPEX-UT-031', team: 'Maint Elec', type: 'Preventive', owner: 'H. Santoso', due: '2026-10-25', priority: 'Medium', status: 'Not started', criteria: 'Auto-lubricator commissioned' },
-    ],
-    verification: {
-      title: 'Bearing Temp (Drive End)', tag: 'TI-4405_DE (°C)', unit: '°C', digits: 0, trip: 95, alarm: 85, alarmDir: 'high', normal: [60, 75],
-      startLabel: '12 Sep',
-      before: { start: 70, end: 82, shape: 'linear', noise: 0.05, seed: 87, points: 42 },
-      checks: [{ state: 'pending', title: 'Actions not started', text: 'Grease sample scheduled' }],
-    },
-    systemicActionIndex: 2,
-    systemicText: 'Manual re-greasing depends on the PM schedule that already slipped once; the auto-lubricator removes that dependency.',
-    fleet: { intro: '3 boiler feed pump motors share the same bearing arrangement.', items: [
-      { id: 'PM-4405A', name: 'BFP Motor A', level: 'MODERATE', note: 'Last greased 120 d ago' },
-      { id: 'PM-4406A', name: 'BFP Motor C', level: 'MONITORING', note: 'Last greased 40 d ago' },
-    ] },
-  },
+  }
 }

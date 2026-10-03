@@ -4,9 +4,11 @@ import { useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { Card, Mono } from '@/components/ui/Card'
 import { useToast } from '@/components/ui/Toast'
-import { investigations, type Investigation } from '@/data/investigation'
-import { currentUser, problems } from '@/data/plant'
-import { rootCauses, type RootCauseCase } from '@/data/rootCause'
+import { assetByTag } from '@/data/dataset'
+import { buildProblem, buildProblems, currentUser, plantLabel } from '@/data/plant'
+import { buildRootCause, type RootCauseCase } from '@/data/rootCause'
+import { rankProblems } from '@/lib/ahp'
+import { useAsOf } from '@/lib/asOf'
 import type { Problem } from '@/data/types'
 import { synthesize } from '@/lib/ahpPairwise'
 import { exportRcaDossier } from '@/lib/dossier'
@@ -20,20 +22,20 @@ import { PriorCheck } from '@/features/rootcause/PriorCheck'
 import { RankingPanel } from '@/features/rootcause/RankingPanel'
 import { ValidationPanel, type ValidationAction } from '@/features/rootcause/ValidationPanel'
 
-const ENGINE = 'Multi-Stream Bayesian Inference Engine'
-const ONTOLOGY_VERSION = 'V4.18.2'
+const ENGINE = 'Evidence synthesis: RCA 4P / 4M+1E · CM trends · Incident DB'
 
 export default function RootCause() {
   const { id } = useParams()
-  const problem = problems.find((p) => p.id === id)
-  const rc = id ? rootCauses[id] : undefined
-  const inv = id ? investigations[id] : undefined
+  const { asOf } = useAsOf()
+  const asset = assetByTag(id)
+  const rc = useMemo(() => (asset ? buildRootCause(asset, asOf) : null), [asset, asOf])
 
-  if (!problem || !rc || !inv) return <Navigate to={`/root-cause/${problems[0].id}`} replace />
-  return <RootCauseView key={problem.id} problem={problem} rc={rc} inv={inv} />
+  if (!asset || !rc) return <Navigate to={`/root-cause/${rankProblems(buildProblems(asOf))[0]?.id ?? 'KO-3201'}`} replace />
+  return <RootCauseView key={asset.tag} problem={buildProblem(asset, asOf)} rc={rc} />
 }
 
-function RootCauseView({ problem, rc, inv }: { problem: Problem; rc: RootCauseCase; inv: Investigation }) {
+function RootCauseView({ problem, rc }: { problem: Problem; rc: RootCauseCase }) {
+  const a = rc.asset
   const ranked = useMemo(() => synthesize(rc.hypotheses), [rc])
   const { decisions, log, record } = useDecision(problem.id)
   const [selectedId, setSelectedId] = useState(ranked[0].id)
@@ -89,20 +91,20 @@ function RootCauseView({ problem, rc, inv }: { problem: Problem; rc: RootCauseCa
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex flex-wrap items-center gap-2.5">
             <Mono className="text-[20px] font-bold text-navy-800">{problem.id}</Mono>
-            <span className="rounded bg-slate-100 px-2 py-0.5 text-[14px] text-ink">{inv.assetType}</span>
+            <span className="rounded bg-slate-100 px-2 py-0.5 text-[14px] text-ink">{a.type}</span>
             <span className={clsx('flex items-center gap-1.5 rounded px-2 py-0.5 text-[14px]', sev.soft, sev.text)}>
               <span className={clsx('size-1.5 rounded-full', problem.severity === 'medium' ? 'bg-ink-2' : sev.bar)} /> {sev.label}
             </span>
             <span className="flex items-center gap-1.5 rounded bg-good-soft px-2 py-0.5 text-[14px] text-good">
-              <span className="size-1.5 rounded-full bg-good" /> Running ({inv.runningPct}%)
+              <span className="size-1.5 rounded-full bg-good" /> Class {a.eqClass} · {a.criticality} criticality
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[15px] text-ink-2">
             <span className="flex items-center gap-1.5">
-              <MapPin className="size-4 text-navy-700" /> {inv.location}
+              <MapPin className="size-4 text-navy-700" /> {plantLabel(a.plant)} ({a.plant})
             </span>
             <span className="flex items-center gap-1.5">
-              <Clock className="size-4" /> Detected: <Mono className="text-ink">{formatDetected(problem.detectedAt)}</Mono>
+              <Clock className="size-4" /> Failure: <Mono className="text-ink">{formatDetected(a.failureDate)}</Mono>
             </span>
             <span className="flex items-center gap-1.5">
               <CircleUserRound className="size-4" /> Lead: <span className="text-ink">{problem.lead}</span>
@@ -114,7 +116,7 @@ function RootCauseView({ problem, rc, inv }: { problem: Problem; rc: RootCauseCa
             <BadgeCheck className={clsx('size-5', acceptedId ? 'text-good' : 'text-navy-700')} /> {stage}
           </span>
           <button
-            onClick={() => exportRcaDossier(problem, inv, ranked, decisions, [...rc.audit, ...log])}
+            onClick={() => exportRcaDossier(problem, a, ranked, decisions, [...rc.audit, ...log])}
             className="flex items-center gap-2 rounded-lg bg-navy-800 px-5 py-2.5 text-[15.5px] font-medium text-white shadow-card hover:bg-navy-700"
           >
             <Download className="size-4" /> Export RCA Dossier
@@ -126,7 +128,7 @@ function RootCauseView({ problem, rc, inv }: { problem: Problem; rc: RootCauseCa
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <nav className="font-mono text-[13.5px] text-ink-2" aria-label="Breadcrumb">
-            <Link to="/" className="hover:text-ink">Plant</Link> / {inv.unitLabel} /{' '}
+            <Link to="/" className="hover:text-ink">Plant</Link> / {a.plant} /{' '}
             <Link to={`/investigation/${problem.id}`} className="font-semibold text-ink hover:underline">
               {problem.id}
             </Link>{' '}
@@ -136,7 +138,7 @@ function RootCauseView({ problem, rc, inv }: { problem: Problem; rc: RootCauseCa
           <p className="text-[16px] text-ink-2">Why is it happening, and which hypothesis should we verify first?</p>
         </div>
         <p className="flex items-center gap-2 text-[14px] text-ink-2">
-          <Waypoints className="size-4 text-teal" /> {ENGINE} · <Mono>Ontology {ONTOLOGY_VERSION}</Mono>
+          <Waypoints className="size-4 text-teal" /> {ENGINE}
         </p>
       </div>
 
@@ -165,7 +167,6 @@ function RootCauseView({ problem, rc, inv }: { problem: Problem; rc: RootCauseCa
                   rank={i + 1}
                   selected={h.id === selected.id}
                   decision={decisions[h.id]}
-                  params={inv.params}
                   onSelect={() => setSelectedId(h.id)}
                 />
               ))}
@@ -184,7 +185,7 @@ function RootCauseView({ problem, rc, inv }: { problem: Problem; rc: RootCauseCa
             placeholder={rc.placeholder}
             onAction={onAction}
           />
-          <AuditTrail entries={[...rc.audit, ...log]} eventNo={rc.eventNo} unitLabel={inv.unitLabel} />
+          <AuditTrail entries={[...rc.audit, ...log]} eventNo={rc.eventNo} unitLabel={a.plant} />
         </div>
       </div>
 

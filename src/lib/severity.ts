@@ -23,10 +23,11 @@ export const signalTone: Record<SignalTone, string> = {
 }
 
 export const statusDot: Record<ProblemStatus, { dot: string; text: string }> = {
+  'Early Warning': { dot: 'bg-medium', text: 'text-ink-2' },
   Investigating: { dot: 'bg-ink-3', text: 'text-ink-2' },
-  'Diagnosis Pending': { dot: 'bg-ink-3', text: 'text-ink-2' },
-  'Action in Progress': { dot: 'bg-info', text: 'text-info' },
-  Validated: { dot: 'bg-good', text: 'text-ink-2' },
+  'RCA in Progress': { dot: 'bg-high', text: 'text-ink-2' },
+  'CA/PA Execution': { dot: 'bg-info', text: 'text-info' },
+  Monitoring: { dot: 'bg-good', text: 'text-ink-2' },
 }
 
 export const actionStatusStyle: Record<ActionStatus, { pill: string; card: string; border: string }> = {

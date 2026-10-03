@@ -4,24 +4,27 @@ import { useState } from 'react'
 import { Card, Mono } from '@/components/ui/Card'
 import type { Investigation } from '@/data/investigation'
 import type { Problem, ProblemStatus } from '@/data/types'
+import { plantLabel } from '@/data/plant'
+import { daysBetween, fmtDate, useAsOf } from '@/lib/asOf'
 import { severityMeta } from '@/lib/severity'
 
-const STAGES = ['Detected', 'Investigating', 'Diagnosis', 'Validated', 'Action', 'Verification', 'Closed']
+const STAGES = ['Warning', 'Investigating', 'RCA', 'CA/PA', 'Monitoring', 'Closed']
 const STAGE_OF: Record<ProblemStatus, number> = {
+  'Early Warning': 0,
   Investigating: 1,
-  'Diagnosis Pending': 2,
-  Validated: 3,
-  'Action in Progress': 4,
+  'RCA in Progress': 2,
+  'CA/PA Execution': 3,
+  Monitoring: 4,
 }
 
-export function relativeTime(iso: string) {
-  const mins = Math.max(0, Math.round((Date.now() - +new Date(iso)) / 60_000))
-  if (mins < 60) return `${mins}m ago`
-  const h = Math.round(mins / 60)
-  return h < 48 ? `${h}h ago` : `${Math.round(h / 24)}d ago`
+/** Selisih hari relatif terhadap tanggal replay (bukan jam komputer). */
+export function relativeTime(iso: string, asOf: string) {
+  const d = daysBetween(iso.slice(0, 10), asOf)
+  return d <= 0 ? 'this week' : `${d} d before as-of`
 }
 
 export function formatDetected(iso: string) {
+  if (iso.length <= 10) return fmtDate(iso)
   const d = new Date(iso)
   const date = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Jakarta' })
   const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' })
@@ -29,6 +32,7 @@ export function formatDetected(iso: string) {
 }
 
 export function AssetSummary({ problem, inv }: { problem: Problem; inv: Investigation }) {
+  const { asOf } = useAsOf()
   const [copied, setCopied] = useState(false)
   const current = STAGE_OF[problem.status]
   const sev = severityMeta[problem.severity]
@@ -51,13 +55,22 @@ export function AssetSummary({ problem, inv }: { problem: Problem; inv: Investig
           <button onClick={copy} className="rounded p-1 text-ink-3 hover:bg-slate-100 hover:text-ink" aria-label="Copy tag">
             {copied ? <Check className="size-4 text-good" /> : <Copy className="size-4" />}
           </button>
-          <span className="flex items-center gap-1.5 rounded-full bg-good-soft px-2.5 py-0.5 text-[13px] font-medium text-good">
-            <span className="size-1.5 rounded-full bg-good" />
-            Running ({inv.runningPct}%)
+          <span
+            className={clsx(
+              'flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[13px] font-medium',
+              inv.running.tone === 'good' ? 'bg-good-soft text-good' : inv.running.tone === 'medium' ? 'bg-medium-soft text-[#b7860b]' : 'bg-critical-soft text-critical',
+            )}
+          >
+            <span className="size-1.5 rounded-full bg-current" />
+            {inv.running.label}
           </span>
         </div>
-        <p className="mt-1 text-[15px] font-medium text-ink">{inv.assetType}</p>
-        <p className="text-[15px] text-ink-2">{inv.location}</p>
+        <p className="mt-1 text-[15px] font-medium text-ink">
+          {inv.asset.name} · Class {inv.asset.eqClass}
+        </p>
+        <p className="text-[15px] text-ink-2">
+          {inv.asset.type} · {plantLabel(inv.asset.plant)} ({inv.asset.plant})
+        </p>
       </div>
 
       <ol className="flex items-start overflow-x-auto pb-1" aria-label="Problem lifecycle">
@@ -97,7 +110,7 @@ export function AssetSummary({ problem, inv }: { problem: Problem; inv: Investig
           </span>
         </div>
         <p className="text-[14px] leading-relaxed text-ink-2">
-          Detected: <Mono className="text-ink">{formatDetected(problem.detectedAt)}</Mono> ({relativeTime(problem.detectedAt)})
+          Detected: <Mono className="text-ink">{formatDetected(problem.detectedAt)}</Mono> ({relativeTime(problem.detectedAt, asOf)})
         </p>
       </div>
     </Card>

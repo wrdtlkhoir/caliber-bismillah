@@ -5,20 +5,21 @@ import { Card, Mono } from '@/components/ui/Card'
 import type { UrgentAction } from '@/data/types'
 import { actionStatusStyle } from '@/lib/severity'
 
-export function UrgentActions({ actions, onSelect }: { actions: UrgentAction[]; onSelect: (id: string) => void }) {
+export function UrgentActions({ actions, total, onSelect }: { actions: UrgentAction[]; total: number; onSelect: (id: string) => void }) {
   return (
     <Card className="p-5">
       <header className="flex items-center gap-3">
         <h2 className="whitespace-nowrap text-lg font-medium text-ink">Urgent Actions</h2>
-        <Mono className="whitespace-nowrap rounded bg-critical-soft px-1.5 py-0.5 text-[11.5px] font-medium text-critical">{actions.length} Active</Mono>
-        <span className="ml-auto whitespace-nowrap text-[13px] text-ink-3">Assignee tracking</span>
+        <Mono className="whitespace-nowrap rounded bg-critical-soft px-1.5 py-0.5 text-[11.5px] font-medium text-critical">{total} Open</Mono>
+        <span className="ml-auto whitespace-nowrap text-[13px] text-ink-3">From RCA CAPA plans</span>
       </header>
 
       <ul className="mt-4 space-y-3">
+        {actions.length === 0 && <li className="rounded-lg bg-slate-50 px-3 py-6 text-center text-[13.5px] text-ink-2">No CAPA actions registered yet at this date.</li>}
         {actions.map((a) => {
           const s = actionStatusStyle[a.status]
           return (
-            <li key={a.problemId}>
+            <li key={a.problemId + a.task}>
               <button
                 onClick={() => onSelect(a.problemId)}
                 className={clsx('w-full rounded-lg border border-l-[3px] border-line px-3 py-2.5 text-left transition hover:shadow-card', s.card, s.border)}

@@ -1,7 +1,8 @@
 import { createBrowserRouter, RouterProvider, type Params } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/AppLayout'
+import { AsOfProvider } from '@/lib/asOf'
 import { NAV } from '@/components/layout/Sidebar'
-import { investigations } from '@/data/investigation'
+import { assetByTag } from '@/data/dataset'
 import Actions from '@/pages/Actions'
 import ComingSoon from '@/pages/ComingSoon'
 import Investigation from '@/pages/Investigation'
@@ -22,13 +23,13 @@ const router = createBrowserRouter([
       {
         path: 'investigation/:id',
         element: <Investigation />,
-        handle: handle((p) => ['Plant', investigations[p.id ?? '']?.unitLabel ?? 'Unit', p.id ?? '']),
+        handle: handle((p) => ['Plant', assetByTag(p.id)?.plant ?? 'Plant', p.id ?? '']),
       },
       { path: 'root-cause', element: <RootCause /> },
       {
         path: 'root-cause/:id',
         element: <RootCause />,
-        handle: handle((p) => ['Plant', investigations[p.id ?? '']?.unitLabel ?? 'Unit', p.id ?? '', 'Root Cause & Decision']),
+        handle: handle((p) => ['Plant', assetByTag(p.id)?.plant ?? 'Plant', p.id ?? '', 'Root Cause & Decision']),
       },
       { path: 'actions', element: <Actions /> },
       {
@@ -47,5 +48,9 @@ const router = createBrowserRouter([
 ])
 
 export default function App() {
-  return <RouterProvider router={router} />
+  return (
+    <AsOfProvider>
+      <RouterProvider router={router} />
+    </AsOfProvider>
+  )
 }

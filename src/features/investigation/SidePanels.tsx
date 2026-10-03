@@ -26,10 +26,10 @@ export function BenchmarkPanel({ inv, value, digits }: { inv: Investigation; val
           <div className="relative mt-10">
             <div className="relative h-7 rounded bg-slate-100">
               <div
-                className="absolute inset-y-0 flex items-center justify-center rounded bg-good-soft text-[11.5px] text-good"
+                className="absolute inset-y-0 flex items-center justify-center overflow-hidden rounded bg-good-soft text-[11.5px] text-good"
                 style={{ left: pct(b.normal[0]), width: `calc(${pct(b.normal[1])} - ${pct(b.normal[0])})` }}
               >
-                <span className="whitespace-nowrap px-1">Normal ({b.normal[0]}–{b.normal[1]})</span>
+                <span className="whitespace-nowrap px-1">{(b.normal[1] - b.normal[0]) / b.scaleMax > 0.25 ? `Normal (${b.normal[0].toFixed(digits)}–${b.normal[1].toFixed(digits)})` : (b.normal[1] - b.normal[0]) / b.scaleMax > 0.1 ? 'Normal' : ''}</span>
               </div>
               <div className="absolute inset-y-0 w-0.5 bg-medium" style={{ left: pct(b.alarm) }} />
               <div className="absolute -inset-y-1 w-0.5 bg-navy-900" style={{ left: pct(b.failure.value) }} />
@@ -128,12 +128,6 @@ export function ConfidencePanel({ c }: { c: Investigation['confidence'] }) {
       </div>
       <p className="mt-3 text-[13px] leading-snug text-ink">
         {c.note}
-        {c.offlineTag && (
-          <>
-            {' '}
-            <Mono className="font-semibold">{c.offlineTag}</Mono> offline (flagged non-critical).
-          </>
-        )}
       </p>
     </Card>
   )
