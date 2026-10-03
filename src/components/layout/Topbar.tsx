@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import { Bell, ChevronRight, Menu, Search, User } from 'lucide-react'
 import { Fragment, useEffect, useRef } from 'react'
 import { useLocation, useMatches, useNavigate, useSearchParams } from 'react-router-dom'
@@ -64,7 +65,14 @@ export function Topbar({ syncLabel, syncing, onSync, onMenu }: Props) {
         {crumbs.map((c, i) => (
           <Fragment key={i}>
             {i > 0 && <ChevronRight className="size-4 text-ink-3" />}
-            <span className={i === crumbs.length - 1 ? (/^[A-Z]{2}-\d/.test(c) ? 'font-mono text-[14px] font-semibold text-ink' : 'font-medium text-ink') : 'text-ink-3'}>{c}</span>
+            <span
+              className={clsx(
+                /^[A-Z]{2}-\d/.test(c) ? 'font-mono text-[14px] font-semibold' : i === crumbs.length - 1 && 'font-medium',
+                i === crumbs.length - 1 || /^[A-Z]{2}-\d/.test(c) ? 'text-ink' : 'text-ink-3',
+              )}
+            >
+              {c}
+            </span>
           </Fragment>
         ))}
       </nav>

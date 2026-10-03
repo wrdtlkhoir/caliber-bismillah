@@ -5,6 +5,7 @@ import { investigations } from '@/data/investigation'
 import ComingSoon from '@/pages/ComingSoon'
 import Investigation from '@/pages/Investigation'
 import Overview from '@/pages/Overview'
+import RootCause from '@/pages/RootCause'
 
 /** Breadcrumb topbar dibaca dari `handle.crumbs` route yang aktif. */
 export type RouteHandle = { crumbs: (params: Params) => string[] }
@@ -22,8 +23,13 @@ const router = createBrowserRouter([
         element: <Investigation />,
         handle: handle((p) => ['Plant', investigations[p.id ?? '']?.unitLabel ?? 'Unit', p.id ?? '']),
       },
-      { path: 'root-cause/:id', element: <ComingSoon />, handle: handle((p) => ['Root Cause & Decision', p.id ?? '']) },
-      ...NAV.filter((n) => n.to !== '/' && n.to !== '/investigation').map((n) => ({
+      { path: 'root-cause', element: <RootCause /> },
+      {
+        path: 'root-cause/:id',
+        element: <RootCause />,
+        handle: handle((p) => ['Plant', investigations[p.id ?? '']?.unitLabel ?? 'Unit', p.id ?? '', 'Root Cause & Decision']),
+      },
+      ...NAV.filter((n) => !['/', '/investigation', '/root-cause'].includes(n.to)).map((n) => ({
         path: n.to,
         element: <ComingSoon />,
         handle: handle(() => ['CALIBER', n.label]),

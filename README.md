@@ -4,8 +4,8 @@ Dashboard reliability & risk untuk unit Olefins & Polyolefins. Tujuannya menjawa
 **"Apa yang perlu ditangani sekarang?"** Caranya: alarm mentah dikelompokkan jadi *problem*, lalu
 problem diranking dengan **AHP (Analytic Hierarchy Process)**, dan setiap problem dihubungkan ke aksi dan pemiliknya.
 
-> Status: **Page 1 – Plant Intelligence / Overview** dan **Page 2 – Problem Investigation** sudah jadi.
-> Halaman lain (Root Cause, Action, dst.) baru berupa placeholder dengan routing.
+> Status: **Page 1 – Overview**, **Page 2 – Problem Investigation**, dan **Page 3 – Root Cause & Decision**
+> sudah jadi. Halaman lain (Action & Reliability, dst.) baru berupa placeholder dengan routing.
 
 ## Menjalankan
 
@@ -56,8 +56,17 @@ src/
 │   ├── TrendChart.tsx        Line chart SVG + crosshair tooltip
 │   ├── SidePanels.tsx        Benchmark, Impact Translation, Data Confidence
 │   └── SimilarIncidents.tsx  Tabel insiden historis + filter
+├── features/rootcause/ Komponen Page 3
+│   ├── HypothesisCard.tsx    Kartu hipotesis (expanded / compact)
+│   ├── RankingPanel.tsx      Breakdown AHP + modal pairwise matrix
+│   ├── ValidationPanel.tsx   Accept / Modify / Request Evidence / Reject
+│   ├── AuditTrail.tsx        Decision audit trail
+│   ├── PriorCheck.tsx        Bayesian prior + perbandingan unit kembar
+│   └── KnowledgePath.tsx     Knowledge path + kanvas ontologi
 ├── lib/
 │   ├── ahp.ts         Bobot AHP + perhitungan skor & breakdown
+│   ├── ahpPairwise.ts AHP penuh: pairwise matrix → eigenvector → CR → sintesis
+│   ├── useDecision.ts Keputusan engineer (disimpan di localStorage)
 │   ├── severity.ts    Mapping warna severity/status
 │   ├── useCountUp.ts  Animasi angka KPI
 │   ├── useLiveSeries.ts Streaming telemetry (mode Live)
@@ -65,7 +74,7 @@ src/
 │   ├── dossier.ts     Export dossier investigasi (.md)
 │   └── useSyncClock.ts Simulasi sinkronisasi real-time
 ├── data/              Tipe data + mock data
-└── pages/             Overview (Page 1), Investigation (Page 2), ComingSoon
+└── pages/             Overview (1), Investigation (2), RootCause (3), ComingSoon
 ```
 
 ## Fitur Page 1 (selain visual)
@@ -104,6 +113,28 @@ pencarian lalu tekan **Enter**. Kelima problem punya data investigasi lengkap.
 - **Export Dossier** mengunduh ringkasan investigasi (`.md`); **Ask CALIBER** membuka panel samping;
   **Request Field …** membuat nomor work request (toast); **Proceed to Root Cause Analysis** lanjut ke Page 3.
 
+## Fitur Page 3 — Root Cause & Decision (`/root-cause/:id`)
+
+Dibuka dari tombol **Proceed to Root Cause Analysis** di Page 2.
+
+- **AHP sungguhan, bukan angka statis.** Bobot 6 kriteria (Evidence 28%, Historical 20%, Temporal 18%,
+  Engineering 16%, Data Confidence 10%, Controllability 8%) dihitung dari **pairwise comparison matrix**
+  skala Saaty lewat eigenvector utama. **Consistency Ratio** (CR ≈ 0.06 < 0.10) juga dihitung. Skor tiap
+  hipotesis lalu disintesis dan dinormalisasi supaya totalnya 1.00 (H1 0.52 · H2 0.31 · H3 0.17).
+  Klik *View pairwise comparison matrix* untuk melihat matriks, λmax, CI, RI, dan CR.
+  Logikanya ada di `src/lib/ahpPairwise.ts`.
+- **Klik hipotesis mana pun** untuk membuka detailnya; panel "Why is Hx ranked…" ikut berganti.
+- **Engineer Validation**:
+  - *Accept* mencatat keputusan dan memunculkan tombol *Proceed to Action Plan*.
+  - *Reject* dan *Modify* wajib diisi justifikasinya.
+  - *Request Evidence* otomatis menyebut sumber data yang belum tersedia.
+  - Semua aksi masuk ke **Decision Audit Trail** dan **tersimpan di localStorage**, jadi tidak hilang saat refresh.
+- **Compare Twins** membandingkan sinyal saat ini dengan kejadian serupa di unit kembar.
+- **Expand Ontology Canvas** menampilkan graf failure-mode (aset → komponen → mode → bukti → riwayat → aksi).
+- **Export RCA Dossier** mengunduh ranking, bukti, keputusan, dan audit trail (`.md`).
+
+> Untuk mereset keputusan saat demo: buka DevTools → Application → Local Storage → hapus key `caliber.rc.*`.
+
 ## Aset dari Figma
 
 Desain: [Figma – Caliber](https://www.figma.com/design/zlQH8RYCAdNQyYJQXJvZjD/Caliber?node-id=0-1)
@@ -115,7 +146,7 @@ Ikon lain sudah dari `lucide-react`, jadi tidak perlu di-export.
 
 ## Roadmap
 
-1. Page 3–6 (Root Cause & Decision, Action & Reliability, Knowledge Base, Data Sources)
+1. Page 4–6 (Action & Reliability, Knowledge Base, Data Sources)
 2. Ganti mock data dengan API (mis. React Query + REST/WebSocket untuk data real-time)
 3. Ask CALIBER disambungkan ke LLM, dengan konteks dari data problem
 4. Deploy ke Vercel / Netlify (`npm run build` → folder `dist/`)

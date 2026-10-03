@@ -28,9 +28,9 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             onClick={onNavigate}
             className={({ isActive }) =>
               clsx(
-                'flex items-center gap-3 border-l-[3px] px-4 py-2.5 text-[14.5px] transition-colors',
+                'flex items-center gap-3 whitespace-nowrap border-l-[3px] px-4 py-2.5 text-[14.5px] transition-colors',
                 isActive
-                  ? 'border-teal bg-navy-950/70 text-[17px] font-medium text-white'
+                  ? 'border-teal bg-navy-950/70 text-[16px] font-medium text-white'
                   : 'border-transparent text-white/80 hover:bg-white/5 hover:text-white',
               )
             }
