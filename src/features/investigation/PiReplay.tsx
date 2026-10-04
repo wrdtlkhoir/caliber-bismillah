@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Activity } from 'lucide-react'
+import { Activity, Pause, Play } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Card, Mono } from '@/components/ui/Card'
 import type { Asset } from '@/data/dataset'
@@ -13,14 +13,15 @@ const fmtHour = (d: Date) =>
   d.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' })
 
 /**
- * Replay data PI per jam (OSIsoft PI extract). Saat "Live Telemetry" aktif,
- * kursor maju 1 jam setiap tick sehingga kejadian sebelum failure bisa diputar ulang.
+ * Data PI per jam (extract historis OSIsoft PI, bukan stream real-time). Tombol replay
+ * memajukan kursor 1 jam setiap tick sehingga kejadian sebelum failure bisa diputar ulang.
  */
-export function PiReplay({ asset, asOf, live, onFinished }: { asset: Asset; asOf: string; live: boolean; onFinished: () => void }) {
+export function PiReplay({ asset, asOf }: { asset: Asset; asOf: string }) {
   const p = asset.production
   const total = p?.running.length ?? 0
   const initial = p ? (piCovers(asset, asOf) ? piIndexAt(asset, asOf) : asOf < p.start ? Math.min(WINDOW_H - 1, total - 1) : total - 1) : 0
   const [cursor, setCursor] = useState(initial)
+  const [live, setLive] = useState(false)
 
   useEffect(() => setCursor(initial), [initial])
 
@@ -29,14 +30,14 @@ export function PiReplay({ asset, asOf, live, onFinished }: { asset: Asset; asOf
     const t = setInterval(() => {
       setCursor((c) => {
         if (c >= total - 1) {
-          onFinished()
+          setLive(false)
           return c
         }
         return c + 1
       })
     }, TICK_MS)
     return () => clearInterval(t)
-  }, [live, p, total, onFinished])
+  }, [live, p, total])
 
   if (!p) return null
 
@@ -59,16 +60,28 @@ export function PiReplay({ asset, asOf, live, onFinished }: { asset: Asset; asOf
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-[17px] font-medium text-ink">
-            <Activity className="size-5 text-teal" /> Hourly PI Telemetry
-            {live && <span className="rounded bg-good-soft px-1.5 py-0.5 text-[11.5px] font-medium text-good">Replaying</span>}
+            <Activity className="size-5 text-teal" /> Historical PI Telemetry
           </h2>
           <p className="text-[13px] text-ink-2">
             PI extract {fmtHour(piTimeAt(asset, 0)).slice(0, 6)} to {fmtHour(piTimeAt(asset, total - 1)).slice(0, 6)}. Showing the last {WINDOW_H} h, grey marks RUN_STATUS OFF.
           </p>
         </div>
-        <Mono className={clsx('rounded-md px-2.5 py-1 text-[13px] font-semibold', running ? 'bg-slate-100 text-ink' : 'bg-critical-soft text-critical')}>
-          {fmtHour(piTimeAt(asset, cursor))} WIB, {running ? 'ON' : 'OFF'}
-        </Mono>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              if (!live && cursor >= total - 1) setCursor(Math.min(WINDOW_H - 1, total - 1))
+              setLive((v) => !v)
+            }}
+            aria-pressed={live}
+            className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[13px] font-medium text-navy-700 hover:bg-slate-100"
+          >
+            {live ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
+            {live ? 'Pause replay' : 'Replay PI history'}
+          </button>
+          <Mono className={clsx('rounded-md px-2.5 py-1 text-[13px] font-semibold', running ? 'bg-slate-100 text-ink' : 'bg-critical-soft text-critical')}>
+            {fmtHour(piTimeAt(asset, cursor))} WIB, {running ? 'ON' : 'OFF'}
+          </Mono>
+        </div>
       </header>
 
       <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 2xl:grid-cols-6">

@@ -47,6 +47,9 @@ interface Props {
   onStatus: (id: string, status: ActionStatus) => void
   /** tanggal acuan overdue (tanggal replay) */
   refDate: string
+  /** status tidak bisa diubah (role tanpa izin edit CAPA) */
+  readOnly?: boolean
+  readOnlyTitle?: string
 }
 
 type StatusFilter = 'all' | 'open' | ActionStatus
@@ -76,7 +79,7 @@ const RANK = {
 
 const matches = (a: CapaAction, f: StatusFilter) => f === 'all' || (f === 'open' ? a.status !== 'Done' : a.status === f)
 
-export function CapaTable({ actions, highlightId, onStatus, refDate }: Props) {
+export function CapaTable({ actions, highlightId, onStatus, refDate, readOnly, readOnlyTitle }: Props) {
   const [filter, setFilter] = useState<StatusFilter>('all')
   const [sort, setSort] = useState<SortKey>('plan')
 
@@ -179,6 +182,11 @@ export function CapaTable({ actions, highlightId, onStatus, refDate }: Props) {
                   <span className={clsx('rounded px-2 py-0.5 text-[14px]', PRIORITY[a.priority])}>{a.priority}</span>
                 </td>
                 <td className="px-3 py-4">
+                  {readOnly ? (
+                    <span className={clsx('inline-block whitespace-nowrap rounded px-2 py-0.5 text-[14px]', STATUS[a.status])} title={readOnlyTitle}>
+                      {a.status}
+                    </span>
+                  ) : (
                   <label className={clsx('relative inline-flex items-center rounded text-[14px]', STATUS[a.status])}>
                     <select
                       value={a.status}
@@ -192,6 +200,7 @@ export function CapaTable({ actions, highlightId, onStatus, refDate }: Props) {
                     </select>
                     <ChevronDown className="pointer-events-none absolute right-1.5 size-3.5" />
                   </label>
+                  )}
                 </td>
                 <td className="hidden px-4 py-4 font-mono text-[12.5px] leading-relaxed text-ink 2xl:table-cell">{a.criteria}</td>
               </tr>

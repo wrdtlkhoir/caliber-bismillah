@@ -1,24 +1,17 @@
-import clsx from 'clsx'
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { buildProblems, lifecycleAt, overviewKpi, PLANT_SCOPE, plantImpactAt, urgentActionsAt } from '@/data/plant'
-import type { TimeRange } from '@/data/types'
+import { buildProblems, lifecycleAt, lossParetoAt, overviewKpi, PLANT_SCOPE, plantImpactAt, urgentActionsAt } from '@/data/plant'
+import type { Period } from '@/data/types'
 import { CRITICAL_RISK_THRESHOLD, rankProblems } from '@/lib/ahp'
 import { fmtDate, useAsOf } from '@/lib/asOf'
-import { AsOfControl } from '@/features/overview/AsOfControl'
 import { AskCaliber } from '@/features/overview/AskCaliber'
 import { KpiStrip } from '@/features/overview/KpiStrip'
 import { LifecyclePipeline } from '@/features/overview/LifecyclePipeline'
+import { PERIOD_PRESETS, PeriodSelect } from '@/features/overview/PeriodSelect'
 import { PriorityRanking } from '@/features/overview/PriorityRanking'
 import { ProblemTank, type SevFilter, type SortKey } from '@/features/overview/ProblemTank'
 import { UnitImpactChart } from '@/features/overview/UnitImpactChart'
 import { UrgentActions } from '@/features/overview/UrgentActions'
-
-const RANGES: { key: TimeRange; label: string }[] = [
-  { key: '90d', label: 'Last 90d' },
-  { key: '180d', label: '6m' },
-  { key: '365d', label: '12m' },
-]
 
 export default function Overview() {
   const { asOf } = useAsOf()
@@ -32,7 +25,7 @@ export default function Overview() {
     setParams(next, { replace: true })
   }
 
-  const [range, setRange] = useState<TimeRange>('90d')
+  const [period, setPeriod] = useState<Period>(PERIOD_PRESETS[2])
   const [filter, setFilter] = useState<SevFilter>('all')
   const [sort, setSort] = useState<SortKey>('ahp')
   const [selectedUnit, setSelectedUnit] = useState<string | null>(null)
@@ -41,8 +34,9 @@ export default function Overview() {
   const ranked = useMemo(() => rankProblems(buildProblems(asOf)), [asOf])
   const [pickedId, setSelectedId] = useState<string | null>(null)
   const selectedId = ranked.some((p) => p.id === pickedId) ? pickedId : (ranked[0]?.id ?? null)
-  const kpi = useMemo(() => overviewKpi(asOf, range), [asOf, range])
+  const kpi = useMemo(() => overviewKpi(asOf, period.days), [asOf, period.days])
   const stages = useMemo(() => lifecycleAt(asOf), [asOf])
+  const pareto = useMemo(() => lossParetoAt(asOf, period.days), [asOf, period.days])
   const urgent = useMemo(() => urgentActionsAt(asOf), [asOf])
 
   // Pool = hasil pencarian + filter unit (sebelum filter severity tab)
@@ -58,7 +52,7 @@ export default function Overview() {
 
   const selected = ranked.find((p) => p.id === selectedId)
   const criticalRisk = ranked.filter((p) => p.ahp >= CRITICAL_RISK_THRESHOLD)
-  const units = useMemo(() => plantImpactAt(asOf, range, [...new Set(ranked.map((p) => p.unitId))]), [asOf, range, ranked])
+  const units = useMemo(() => plantImpactAt(asOf, period.days, [...new Set(ranked.map((p) => p.unitId))]), [asOf, period.days, ranked])
   const threshold = {
     downtimeH: (1.5 * units.reduce((s, u) => s + u.downtimeH, 0)) / (units.length || 1),
     lossK: (1.5 * units.reduce((s, u) => s + u.lossK, 0)) / (units.length || 1),
@@ -103,27 +97,11 @@ export default function Overview() {
             <span className="size-1.5 rounded-full bg-good" />
             Data as of {fmtDate(asOf)}, {PLANT_SCOPE}
           </span>
-          <div role="radiogroup" aria-label="Time range" className="flex rounded-lg bg-slate-200/70 p-1">
-            {RANGES.map((r) => (
-              <button
-                key={r.key}
-                role="radio"
-                aria-checked={range === r.key}
-                onClick={() => setRange(r.key)}
-                className={clsx(
-                  'rounded-md px-3 py-1 text-[15px] transition',
-                  range === r.key ? 'bg-white font-medium text-navy-800 shadow-card' : 'text-ink-2 hover:text-ink',
-                )}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
+          <PeriodSelect period={period} onPeriod={setPeriod} />
         </div>
       </div>
 
-      <AsOfControl />
-      <KpiStrip kpi={kpi} rangeLabel={RANGES.find((r) => r.key === range)!.label.replace('Last ', '')} critical={criticalRisk} activeCount={ranked.length} />
+      <KpiStrip kpi={kpi} rangeLabel={period.short} critical={criticalRisk} activeCount={ranked.length} />
       <LifecyclePipeline stages={stages} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -152,7 +130,15 @@ export default function Overview() {
         />
 
         <aside className="space-y-6 xl:sticky xl:top-[96px] xl:self-start">
-          <PriorityRanking ranked={pool} selectedId={selectedId} hoveredId={hoveredId} onSelect={focusProblem} onHover={setHoveredId} />
+          <PriorityRanking
+            ranked={pool}
+            selectedId={selectedId}
+            hoveredId={hoveredId}
+            onSelect={focusProblem}
+            onHover={setHoveredId}
+            pareto={pareto}
+            periodLabel={period.label.startsWith('Last') ? period.label.toLowerCase() : period.label}
+          />
           <UrgentActions actions={urgent.items} total={urgent.total} onSelect={focusProblem} />
         </aside>
       </div>
@@ -161,7 +147,7 @@ export default function Overview() {
         units={units}
         problems={ranked}
         threshold={threshold}
-        range={range}
+        period={period}
         selectedUnit={selectedUnit}
         onSelectUnit={(id) => {
           setSelectedUnit(id)

@@ -1,8 +1,15 @@
 import type { Phase } from '@/lib/analytics'
 
 export type Severity = 'critical' | 'high' | 'medium'
-/** Jendela agregasi KPI & chart, berakhir di tanggal "as of". */
-export type TimeRange = '90d' | '180d' | '365d'
+/** Jendela agregasi KPI & chart: `days` hari yang berakhir di tanggal "as of". */
+export interface Period {
+  key: string
+  days: number
+  /** mis. "Last 90 days" atau "01 Feb 2026 – 22 Apr 2026" */
+  label: string
+  /** label pendek untuk delta KPI, mis. "90d" */
+  short: string
+}
 
 export type ProblemStatus = 'Early Warning' | 'Investigating' | 'RCA in Progress' | 'CA/PA Execution' | 'Monitoring'
 

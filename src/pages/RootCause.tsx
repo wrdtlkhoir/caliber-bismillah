@@ -40,6 +40,7 @@ export default function RootCause() {
 
 function RootCauseView({ problem, rc }: { problem: Problem; rc: RootCauseCase }) {
   const a = rc.asset
+  const { asOf } = useAsOf()
   const pairwise = usePairwise()
   const [constraints, setConstraints] = useConstraints(problem.id)
   const [constraintsOpen, setConstraintsOpen] = useState(false)
@@ -123,7 +124,7 @@ function RootCauseView({ problem, rc }: { problem: Problem; rc: RootCauseCase })
             <BadgeCheck className={clsx('size-5', acceptedId ? 'text-good' : 'text-navy-700')} /> {stage}
           </span>
           <button
-            onClick={() => exportRcaDossier(problem, a, ranked, decisions, [...rc.audit, ...log], pairwise.analysis)}
+            onClick={() => exportRcaDossier(problem, a, ranked, decisions, [...rc.audit, ...log], asOf, pairwise.analysis)}
             className="flex items-center gap-2 rounded-lg bg-navy-800 px-5 py-2.5 text-[15.5px] font-medium text-white shadow-card hover:bg-navy-700"
           >
             <Download className="size-4" /> Export RCA Dossier

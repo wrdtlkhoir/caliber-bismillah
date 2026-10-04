@@ -3,6 +3,7 @@
  */
 import {
   assetHealth,
+  incidentsInWindow,
   kpis,
   plantImpact,
   readingsUpTo,
@@ -12,11 +13,9 @@ import {
 } from '@/lib/analytics'
 import { addDays, daysBetween, fmtDate } from '@/lib/asOf'
 import { assets, incidentOf, incidents, type Asset, type CmParam } from './dataset'
-import type { Kpi, LifecycleStage, Problem, ProblemStatus, Severity, Signal, SignalIcon, TimeRange, UnitImpact, UrgentAction } from './types'
+import type { Kpi, LifecycleStage, Problem, ProblemStatus, Severity, Signal, SignalIcon, UnitImpact, UrgentAction } from './types'
 
-export const currentUser = { name: 'Dr. Aris S.', role: 'Lead Reliability', notifications: 2 }
-
-export const RANGE_DAYS: Record<TimeRange, number> = { '90d': 90, '180d': 180, '365d': 365 }
+export const currentUser = { name: 'Dr. Aris S.', notifications: 2 }
 
 /** Nama plant dari laporan RCA ("ZCU  (Zeta Cracker Unit)"); plant lain hanya punya kode. */
 export const PLANT_NAMES: Record<string, string> = Object.fromEntries(
@@ -198,8 +197,8 @@ export function lifecycleAt(asOf: string): LifecycleStage[] {
   }))
 }
 
-export function overviewKpi(asOf: string, range: TimeRange): Kpi {
-  const k = kpis(asOf, RANGE_DAYS[range])
+export function overviewKpi(asOf: string, days: number): Kpi {
+  const k = kpis(asOf, days)
   const from = addDays(asOf, -28)
   const rawAlerts = assets.reduce(
     (n, a) =>
@@ -220,8 +219,8 @@ export function overviewKpi(asOf: string, range: TimeRange): Kpi {
 }
 
 /** Downtime & loss per plant (Incident DB), maksimal 6 kolom — plant dengan problem aktif selalu ikut. */
-export function plantImpactAt(asOf: string, range: TimeRange, problemPlants: string[]): UnitImpact[] {
-  const rows = plantImpact(asOf, RANGE_DAYS[range]).sort((x, y) => y.downtimeH - x.downtimeH)
+export function plantImpactAt(asOf: string, days: number, problemPlants: string[]): UnitImpact[] {
+  const rows = plantImpact(asOf, days).sort((x, y) => y.downtimeH - x.downtimeH)
   const must = rows.filter((r) => problemPlants.includes(r.plant))
   const missing = problemPlants.filter((p) => !rows.some((r) => r.plant === p)).map((plant) => ({ plant, downtimeH: 0, lossK: 0, count: 0 }))
   const rest = rows.filter((r) => !problemPlants.includes(r.plant))
@@ -229,4 +228,30 @@ export function plantImpactAt(asOf: string, range: TimeRange, problemPlants: str
     .slice(0, Math.max(6, must.length + missing.length))
     .sort((x, y) => y.downtimeH - x.downtimeH)
     .map((r) => ({ id: r.plant, code: r.plant, name: plantLabel(r.plant), downtimeH: r.downtimeH, lossK: r.lossK, incidents: r.count }))
+}
+
+export interface ParetoRow {
+  code: string
+  lossK: number
+  count: number
+  /** persentase kumulatif sampai baris ini (0–100) */
+  cumPct: number
+}
+
+/** Pareto Total Loss (k US$) Incident DB per tipe equipment, dalam periode yang berakhir di as-of. */
+export function lossParetoAt(asOf: string, days: number): ParetoRow[] {
+  const m = new Map<string, { lossK: number; count: number }>()
+  for (const i of incidentsInWindow(asOf, days)) {
+    const e = m.get(i.eqType) ?? { lossK: 0, count: 0 }
+    e.lossK += i.totalLossK
+    e.count += 1
+    m.set(i.eqType, e)
+  }
+  const rows = [...m.entries()].map(([code, v]) => ({ code, ...v })).sort((x, y) => y.lossK - x.lossK)
+  const total = rows.reduce((s, r) => s + r.lossK, 0)
+  let run = 0
+  return rows.map((r) => {
+    run += r.lossK
+    return { ...r, cumPct: total ? (run / total) * 100 : 0 }
+  })
 }

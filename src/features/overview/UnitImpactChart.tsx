@@ -1,8 +1,7 @@
 import clsx from 'clsx'
 import { Card, Mono } from '@/components/ui/Card'
-import type { Problem, Severity, TimeRange, UnitImpact } from '@/data/types'
+import type { Period, Problem, Severity, UnitImpact } from '@/data/types'
 
-const RANGE_LABEL: Record<TimeRange, string> = { '90d': 'Last 90 Days', '180d': 'Last 6 Months', '365d': 'Last 12 Months' }
 const SEV_ORDER: Severity[] = ['critical', 'high', 'medium']
 const SEV_TEXT: Record<Severity, string> = { critical: 'text-critical', high: 'text-high', medium: 'text-[#b7860b]' }
 const PLOT_H = 120
@@ -12,7 +11,7 @@ interface Props {
   problems: Problem[]
   /** batas downtime per plant (garis putus-putus) */
   threshold: { downtimeH: number; lossK: number }
-  range: TimeRange
+  period: Period
   selectedUnit: string | null
   onSelectUnit: (id: string | null) => void
 }
@@ -22,7 +21,7 @@ interface Props {
  * jadi tiap bar diskalakan ke maksimum metriknya sendiri dan nilai selalu
  * ditulis langsung di atas bar (tidak ada sumbu-y ganda yang menyesatkan).
  */
-export function UnitImpactChart({ units, problems, threshold, range, selectedUnit, onSelectUnit }: Props) {
+export function UnitImpactChart({ units, problems, threshold, period, selectedUnit, onSelectUnit }: Props) {
   const maxD = Math.max(threshold.downtimeH * 1.25, ...units.map((u) => u.downtimeH))
   const maxL = Math.max(threshold.lossK * 1.25, ...units.map((u) => u.lossK))
   const thresholdY = (threshold.downtimeH / maxD) * PLOT_H
@@ -31,7 +30,7 @@ export function UnitImpactChart({ units, problems, threshold, range, selectedUni
     <Card className="p-5">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-medium text-ink">Downtime vs loss by plant ({RANGE_LABEL[range].toLowerCase()})</h2>
+          <h2 className="text-lg font-medium text-ink">Downtime vs loss by plant ({period.label.startsWith('Last') ? period.label.toLowerCase() : period.label})</h2>
           <p className="text-[13px] text-ink-2">
             From the Incident Database. Click a plant to isolate its active problems.
             {selectedUnit && (
