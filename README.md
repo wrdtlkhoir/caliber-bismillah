@@ -10,8 +10,9 @@ Dashboard reliability & risk untuk **Case 2: Intelligent Manufacturing**. Tujuan
 Semua angka di dashboard **dihitung dari dataset resmi lomba** (Equipment Performance, Production Data,
 Incident Database, laporan RCA), bukan data dummy.
 
-> Status: Page 1 Overview, Page 2 Problem Investigation, Page 3 Root Cause & Decision, dan Page 4 Action & Reliability
-> sudah jadi. Knowledge Base dan Data Sources masih placeholder.
+> Status: Page 1 Overview, Page 2 Problem Investigation, Page 3 Root Cause & Decision, Page 4 Action & Reliability,
+> Knowledge Base, dan Data Sources sudah jadi. Data HSE, energi, dan finance tidak ada di baseline sehingga
+> ditampilkan sebagai Phase 2 / Future, tanpa angka.
 
 ## Menjalankan
 
@@ -48,7 +49,7 @@ jalankan `npm run data`. Script juga memberi peringatan kalau ada tabel RCA yang
 ### Mode replay ("as of")
 
 Setiap failure di dataset terjadi pada tanggal berbeda (Mar–Jul 2026). Karena itu dashboard punya
-**tanggal replay**, yaitu slider di Page 1 dengan preset "1 week before {tag} failure". Semua halaman menghitung
+**tanggal replay**, dipilih lewat dropdown periode di Page 1 (preset "1 wk before {tag} failure" atau tanggal akhir custom range). Semua halaman menghitung
 kondisi aset, KPI, insiden yang sudah diketahui, dan CAPA **pada tanggal tersebut**. Dengan begitu juri bisa
 melihat bagaimana degradasi sebenarnya sudah terlihat berminggu-minggu sebelum aset trip.
 
@@ -92,7 +93,9 @@ src/
 │   ├── plant.ts              Builder Page 1 (problem, KPI, plant, urgent action, lifecycle)
 │   ├── investigation.ts      Builder Page 2
 │   ├── rootCause.ts          Builder Page 3 (+ kurasi judul hipotesis & pemetaan 4P → parameter)
-│   └── actions.ts            Builder Page 4
+│   ├── actions.ts            Builder Page 4
+│   ├── sources.ts            Katalog Data Sources (coverage dihitung dari dataset)
+│   └── knowledge.ts          Glossary Knowledge Base (dengan label sumber)
 ├── lib/
 │   ├── analytics.ts          Health, early warning, retrieval, KPI, PI helper
 │   ├── ahp.ts                AHP prioritas problem (Page 1)
@@ -100,30 +103,32 @@ src/
 │   ├── asOf.tsx              Context tanggal replay
 │   ├── useDecision.ts        Keputusan engineer (localStorage)
 │   ├── usePersistentState.ts useState yang tersimpan di localStorage
-│   └── dossier.ts            Export dossier investigasi & RCA (.md)
+│   ├── role.tsx              Context role operasional + matriks permission
+│   └── dossier.ts            Export dossier investigasi & RCA (PDF, jsPDF + autotable, lazy-load)
 ├── features/
-│   ├── overview/             Page 1: AsOfControl, KpiStrip, ProblemTank, PriorityRanking, UnitImpactChart, …
-│   ├── investigation/        Page 2: ParameterCard, TrendChart, PiReplay, SidePanels, SimilarIncidents, …
+│   ├── overview/             Page 1: PeriodSelect, KpiStrip, ProblemTank, PriorityRanking (+ LossPareto), UnitImpactChart, …
+│   ├── investigation/        Page 2: ParameterCard, TrendChart, PiReplay, AskCaliberChat, SidePanels, SimilarIncidents, …
 │   ├── rootcause/            Page 3: HypothesisCard, RankingPanel, ValidationPanel, AuditTrail, KnowledgePath, …
-│   └── actions/              Page 4: CapaTable, AddActionModal, VerificationChart
-├── components/               Layout (Sidebar, Topbar) & UI (Card, Modal, Drawer, Toast)
-└── pages/                    Overview, Investigation, RootCause, Actions, ComingSoon
+│   ├── actions/              Page 4: CapaTable, AddActionModal, VerificationChart
+│   └── datasources/          UploadModal (preview metadata, pending validation)
+├── components/               Layout (Sidebar, Topbar) & UI (Card, Modal, Drawer, Toast, StatusLabel)
+└── pages/                    Overview, Investigation, RootCause, Actions, KnowledgeBase, DataSources
 ```
 
 ## Fitur per halaman
 
 ### Page 1 — Plant Intelligence (`/`)
-- **Dataset replay**: slider tanggal + preset sebelum tiap failure.
+- **Period selector**: dropdown yang bisa dicari: Last 7/30/90 days, 6/12 months, custom range, dan tanggal replay (1 minggu sebelum tiap failure, latest data). Periode selalu berakhir di tanggal replay.
 - **KPI**:
   - Availability aset termonitor.
-  - Downtime dan loss dari Incident DB per jendela 90 hari / 6 bulan / 12 bulan, dengan delta terhadap periode sebelumnya.
+  - Downtime dan loss dari Incident DB dalam periode terpilih, dengan delta terhadap periode sebelumnya.
   - Exposure = potential loss dari risiko yang masih terbuka.
 - **Lifecycle**: jumlah insiden per status (New Registered → RCA Process → CA/PA Execution → Monitoring → Risk Closed).
 - **Problem Tank**:
   - Aset dengan fase early-warning / alarm / trip / CAPA.
   - Sinyal berisi nilai asli terhadap limit, plus proyeksi "Trip in ~N d".
   - Kotak pencarian, filter severity, urutan, dan pilihan tampilan **Cards / List** supaya tetap rapi saat problem banyak (kartu dibatasi 4 dengan tombol *Show more*).
-  - **Risk Priority Ranking** (skor berbobot 6 kriteria) dan Ask CALIBER.
+  - **Risk Priority Ranking** (skor berbobot 6 kriteria) dengan tab **Pareto**: Total Loss (k US$) Incident DB per tipe equipment dalam periode terpilih, garis kumulatif %, dan referensi 80%. Ada juga Ask CALIBER.
 - **Urgent Actions**: action CAPA terbuka dari laporan RCA, ditandai *Overdue* relatif terhadap tanggal replay.
 - **Downtime vs Loss by Plant**: data dari Incident Database. Klik plant untuk memfilter problem.
 
@@ -131,7 +136,7 @@ src/
 - **Empat parameter condition monitoring** per aset (26 minggu), lengkap dengan:
   - pita baseline, garis alarm/trip, dan tooltip,
   - perubahan 4 minggu dan proyeksi menuju alarm/trip.
-- **Hourly PI Telemetry**: tombol *Live Telemetry* memutar ulang data PI jam demi jam. Untuk KO-3201,
+- **Historical PI Telemetry**: data extract PI historis (bukan real-time); tombol *Replay PI history* memutar ulang data jam demi jam. Untuk KO-3201,
   terlihat vibrasi naik 27–29 April sampai trip, dan arsiran abu-abu menandai jam saat RUN_STATUS = OFF.
 - **Benchmark, Impact Translation, Data Confidence**: semuanya dihitung, termasuk *expected loss* dari rata-rata insiden paling mirip.
 - **Similar Historical Incidents**: hasil retrieval dari 380 insiden, lengkap dengan skor dan alasan kecocokan.
@@ -153,6 +158,42 @@ src/
 - **Fleet vulnerability**: tag dari action pro-active (mis. KO-3202/3203) dan aset sejenis di plant yang sama.
 - **Integrasi dengan Page 3**: kalau hipotesis sudah di-*Accept* di Page 3, banner validasi memakai keputusan tersebut.
 
+### Role operasional
+
+Selector di sidebar (6 role: Reliability Engineer, Operations Manager, Maintenance Planner, Finance Manager,
+HSE Manager, Plant Director) menentukan kontrol edit yang aktif (`src/lib/role.tsx`). Semua role bisa melihat
+keempat halaman, memakai Ask CALIBER, dan export PDF. Kontrol yang tidak diizinkan tetap terlihat tapi disabled.
+
+| Aksi | Role yang boleh |
+|---|---|
+| Engineer Validation (Accept/Modify/Request evidence/Reject) | Reliability Engineer |
+| Pairwise matrix Page 3, per sel: role boleh edit sel kalau memiliki kriteria baris **atau** kolom (`CRITERION_OWNERS`) | Reliability Engineer: Evidence Strength, Historical Similarity, Temporal Correlation, Engineering Consistency, Data Confidence · Maintenance Planner: Controllability & Risk · role lain: view only |
+| Decision constraints | Reliability Engineer, Operations Manager |
+| CAPA: tambah action, ubah status, close/reopen/escalate, fleet review; field request (Page 2) | Reliability Engineer, Maintenance Planner |
+
+| Upload data (Data Sources), per domain | Reliability Engineer: Equipment Performance, Incident, RCA / CAPA, Downtime · Operations Manager: Production, Downtime · Maintenance Planner: Downtime, RCA / CAPA (semua: Other). Finance, HSE, Director: belum ada skema → disabled |
+
+Ask CALIBER di Page 2 berbentuk chat **demo**: jawaban tetap disusun dari data kasus yang tampil, tidak terhubung ke LLM.
+
+### HSE & Safety (Page 1)
+
+Baseline **tidak punya** klasifikasi HSE (kategori *Highest Impact* semuanya operasional). Karena itu KPI
+"HSE Incidents" dan status HSE ditampilkan sebagai **Phase 2 / Data not in baseline**: tanpa angka, nol, atau tren.
+Section "HSE & Safety" menampilkan ketersediaan data (sistem HSE: *not connected*), metrik lingkungan masa depan
+tanpa nilai, dan konteks insiden operasional aset termonitor sampai tanggal replay. Insiden ini dilabeli
+**bukan** event HSE. Untuk role HSE Manager, section ini dipindah ke atas dan ranking diberi label *Operational risk view*.
+
+### Knowledge Base & Data Sources
+
+- **Knowledge Base** (`/knowledge`): glossary read-only berisi 56 istilah dengan search, filter kategori, dan drawer
+  detail (definisi, peran di CALIBER, related terms, halaman pemakai, kasus terkait). Setiap entri diberi label sumber:
+  *CALIBER case terminology*, *Provided RCA material*, atau *General industrial definition* (bukan standar internal).
+  Kategori HSE sengaja kosong.
+- **Data Sources** (`/data-sources`): katalog 4 sumber baseline (format file lomba dipisah dari domain data), coverage
+  dan field asli, diagram arsitektur, dan sumber *Future / Conceptual* yang *not connected*. Ada juga upload XLSX/CSV
+  yang hanya membaca metadata di browser lalu berstatus *Pending validation*; data hasil upload tidak pernah masuk analytics.
+  Manifest file (nama, ukuran, sheet, jumlah baris/slide) ditulis oleh `npm run data` ke `sourceFiles`.
+
 > Reset data demo: DevTools → Application → Local Storage → hapus key `caliber.*`.
 
 ## Aset dari Figma
@@ -163,7 +204,7 @@ ke `public/logo.svg`, lalu ganti `<svg>` di komponen tersebut dengan `<img src="
 
 ## Roadmap
 
-1. Page 5–6: Knowledge Base (indeks RCA & lessons learned) dan Data Sources (status pipeline ETL).
+1. Integrasi sumber Future (PI/historian, HSE, energi, ERP) setelah skema data disetujui.
 2. Ask CALIBER via LLM + RAG atas teks RCA dan Incident Database.
 3. Code-splitting dataset (dynamic import) supaya bundle awal lebih kecil.
 4. Deploy ke Vercel / Netlify (`npm run build` → `dist/`).
