@@ -7,7 +7,7 @@ import { currentUser } from '@/data/plant'
 import type { Hypothesis } from '@/data/rootCause'
 import { analyzeMatrix, buildMatrix, CR_THRESHOLD, DEFAULT_UPPER, fraction, RC_CRITERIA, rcWeight, SAATY_SCALE } from '@/lib/ahpPairwise'
 import { fmtDate } from '@/lib/asOf'
-import { useRole } from '@/lib/role'
+import { CRITERION_OWNERS, ownsCriterion, useRole } from '@/lib/role'
 import type { PairwiseState } from '@/lib/usePairwise'
 
 const pct = (v: number) => `${Math.round(v * 100)}%`
@@ -69,11 +69,10 @@ export function RankingPanel({ h, rank, pairwise }: { h: Hypothesis & { priority
         </span>
         <button
           onClick={() => setOpen(true)}
-          disabled={!can('editPairwise')}
           title={can('editPairwise') ? undefined : viewOnly}
-          className="flex items-center gap-1.5 font-medium text-navy-700 hover:underline disabled:text-ink-3 disabled:no-underline"
+          className="flex items-center gap-1.5 font-medium text-navy-700 hover:underline"
         >
-          <PencilLine className="size-4" /> Fill pairwise matrix
+          <PencilLine className="size-4" /> {can('editPairwise') ? 'Fill pairwise matrix' : 'View pairwise matrix'}
         </button>
       </div>
 
@@ -86,7 +85,13 @@ export function RankingPanel({ h, rank, pairwise }: { h: Hypothesis & { priority
 function PairwiseEditor({ pairwise, onClose }: { pairwise: PairwiseState; onClose: () => void }) {
   const [draft, setDraft] = useState(() => pairwise.upper.map((r) => [...r]))
   const [filledBy, setFilledBy] = useState(pairwise.judgment?.filledBy ?? currentUser.name)
-  const { role } = useRole()
+  const { role, viewOnly } = useRole()
+  const owns = RC_CRITERIA.map((c) => ownsCriterion(role, c.key))
+  /** Sel i-vs-j bisa diedit kalau role memiliki salah satu kriterianya. */
+  const editable = (i: number, j: number) => owns[i] || owns[j]
+  const cells = RC_CRITERIA.flatMap((_, i) => RC_CRITERIA.map((_, j) => [i, j] as const)).filter(([i, j]) => j > i)
+  const editableCount = cells.filter(([i, j]) => editable(i, j)).length
+  const editsAll = editableCount === cells.length
   const matrix = buildMatrix(draft)
   const a = analyzeMatrix(matrix)
   const consistent = a.cr < CR_THRESHOLD
@@ -102,11 +107,26 @@ function PairwiseEditor({ pairwise, onClose }: { pairwise: PairwiseState; onClos
       subtitle="For each pair, pick how much more important the row criterion is than the column criterion (Saaty scale 1/9 to 9). The lower half fills itself."
       className="max-w-5xl"
     >
+      <p className="mb-3 rounded-lg bg-slate-50 px-3 py-2 text-[13px] text-ink-2">
+        {editableCount === 0 ? (
+          <>
+            <span className="font-medium text-ink">{viewOnly}.</span> No criterion in this matrix belongs to your role.
+          </>
+        ) : editsAll ? (
+          <>You can edit every comparison as {role}.</>
+        ) : (
+          <>
+            As {role} you can edit comparisons involving{' '}
+            <span className="font-medium text-ink">{RC_CRITERIA.filter((_, i) => owns[i]).map((c) => c.label).join(', ')}</span>. Other cells are view only.
+          </>
+        )}
+      </p>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] text-center text-[13px]">
+        <table className="w-full min-w-[820px] text-center text-[13px]">
           <thead>
             <tr className="text-ink-2">
               <th className="px-2 py-2 text-left font-medium">Criterion</th>
+              <th className="px-2 py-2 text-left font-medium">Owner</th>
               {RC_CRITERIA.map((c, i) => (
                 <th key={c.key} className="px-1 py-2 font-medium" title={c.label}>
                   C{i + 1}
@@ -122,15 +142,26 @@ function PairwiseEditor({ pairwise, onClose }: { pairwise: PairwiseState; onClos
                   <Mono className="mr-1.5 text-ink-3">C{i + 1}</Mono>
                   {RC_CRITERIA[i].label}
                 </td>
+                <td className={clsx('whitespace-nowrap px-2 py-1.5 text-left text-[12px]', owns[i] ? 'font-medium text-navy-800' : 'text-ink-2')}>
+                  {CRITERION_OWNERS[RC_CRITERIA[i].key].join(', ')}
+                </td>
                 {row.map((v, j) => (
                   <td key={j} className="px-1 py-1.5">
                     {j > i ? (
                       <select
                         value={SAATY_SCALE.findIndex((s) => Math.abs(s - v) < 1e-6)}
                         onChange={(e) => setCell(i, j, SAATY_SCALE[Number(e.target.value)])}
+                        disabled={!editable(i, j)}
+                        title={editable(i, j) ? undefined : viewOnly}
                         className={clsx(
                           'w-[62px] rounded-md border bg-white px-1 py-1 font-mono text-[13px] outline-none focus:ring-2 focus:ring-navy-600/20',
-                          v > 1 ? 'border-navy-700/40 font-semibold text-navy-800' : v < 1 ? 'border-line text-ink-2' : 'border-line text-ink',
+                          !editable(i, j)
+                            ? 'cursor-not-allowed border-dashed border-slate-300 bg-slate-50 text-ink-2'
+                            : v > 1
+                              ? 'border-navy-700/40 font-semibold text-navy-800'
+                              : v < 1
+                                ? 'border-line text-ink-2'
+                                : 'border-line text-ink',
                         )}
                         aria-label={`${RC_CRITERIA[i].label} vs ${RC_CRITERIA[j].label}`}
                       >
@@ -175,7 +206,12 @@ function PairwiseEditor({ pairwise, onClose }: { pairwise: PairwiseState; onClos
       <div className="mt-5 grid gap-3 border-t border-line pt-4 sm:grid-cols-2">
         <label className="text-[13px] text-ink-2">
           Filled by
-          <input value={filledBy} onChange={(e) => setFilledBy(e.target.value)} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-[14px] text-ink outline-none focus:ring-2 focus:ring-navy-600/20" />
+          <input
+            value={filledBy}
+            onChange={(e) => setFilledBy(e.target.value)}
+            disabled={editableCount === 0}
+            className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-[14px] text-ink outline-none focus:ring-2 focus:ring-navy-600/20 disabled:bg-slate-50 disabled:text-ink-2"
+          />
         </label>
         <label className="text-[13px] text-ink-2">
           Role
@@ -185,13 +221,16 @@ function PairwiseEditor({ pairwise, onClose }: { pairwise: PairwiseState; onClos
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
         <button
-          onClick={() => setDraft(DEFAULT_UPPER.map((r) => [...r]))}
-          className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[14px] text-ink-2 hover:bg-slate-100"
+          // hanya sel milik role yang dikembalikan ke baseline
+          onClick={() => setDraft((d) => d.map((row, i) => row.map((x, k) => (editable(i, i + k + 1) ? DEFAULT_UPPER[i][k] : x))))}
+          disabled={editableCount === 0}
+          title={editableCount === 0 ? viewOnly : undefined}
+          className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[14px] text-ink-2 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent"
         >
           <RotateCcw className="size-4" /> Load baseline judgment
         </button>
         <div className="flex gap-2">
-          {pairwise.judgment && (
+          {pairwise.judgment && editsAll && (
             <button
               onClick={() => {
                 pairwise.reset()
@@ -206,7 +245,8 @@ function PairwiseEditor({ pairwise, onClose }: { pairwise: PairwiseState; onClos
             Cancel
           </button>
           <button
-            disabled={!consistent || !filledBy.trim()}
+            disabled={editableCount === 0 || !consistent || !filledBy.trim()}
+            title={editableCount === 0 ? viewOnly : undefined}
             onClick={() => {
               pairwise.save({ upper: draft, filledBy: filledBy.trim(), role })
               onClose()

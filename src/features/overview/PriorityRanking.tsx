@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Card } from '@/components/ui/Card'
 import type { ParetoRow } from '@/data/plant'
 import { AHP_WEIGHTS, ahpBreakdown, CRITERIA_KEYS, CRITICAL_RISK_THRESHOLD, type RankedProblem } from '@/lib/ahp'
+import { useRole } from '@/lib/role'
 import { rankBarColor } from '@/lib/severity'
 import { LossPareto } from './LossPareto'
 
@@ -20,6 +21,7 @@ type View = 'ranking' | 'pareto'
 
 export function PriorityRanking({ ranked, selectedId, hoveredId, onSelect, onHover, pareto, periodLabel }: Props) {
   const [view, setView] = useState<View>('ranking')
+  const { role } = useRole()
   return (
     <Card className="p-5">
       <header className="flex items-start justify-between gap-3">
@@ -49,6 +51,11 @@ export function PriorityRanking({ ranked, selectedId, hoveredId, onSelect, onHov
       ) : (
         <>
           <p className="mt-1 text-[13px] leading-snug text-ink-2">Weighted score from six operational criteria</p>
+          {role === 'HSE Manager' && (
+            <p className="mt-2 text-[12.5px] leading-snug text-ink-2">
+              <span className="font-medium text-ink">Operational risk view.</span> Dedicated HSE risk data is not included in the current baseline.
+            </p>
+          )}
 
           <ul className="mt-3 flex flex-wrap gap-1.5">
             {CRITERIA_KEYS.map((k) => (

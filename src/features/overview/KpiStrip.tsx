@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import type { ReactNode } from 'react'
 import { Card } from '@/components/ui/Card'
+import { StatusLabel } from '@/components/ui/StatusLabel'
 import type { Kpi } from '@/data/types'
 import type { RankedProblem } from '@/lib/ahp'
 import { useCountUp } from '@/lib/useCountUp'
@@ -15,7 +16,7 @@ function Tile({ label, children, foot, extra, className }: { label: string; chil
         {extra}
       </div>
       <div className="font-mono text-[32px] font-bold leading-none tracking-tight text-ink tabular">{children}</div>
-      <div className="font-mono text-[12px] tabular xl:whitespace-nowrap">{foot}</div>
+      <div className="font-mono text-[12px] tabular">{foot}</div>
     </div>
   )
 }
@@ -48,7 +49,7 @@ export function KpiStrip({ kpi, rangeLabel, critical, activeCount }: Props) {
   const exposure = useCountUp(kpi.financialExposure.valueM)
 
   return (
-    <Card className="grid grid-cols-2 divide-line md:grid-cols-3 xl:grid-cols-6 xl:divide-x [&>*]:border-line max-xl:[&>*]:border-b">
+    <Card className="grid grid-cols-2 divide-line md:grid-cols-4 min-[1400px]:grid-cols-7 min-[1400px]:divide-x [&>*]:border-line max-[1399px]:[&>*]:border-b">
       <Tile label="Asset Availability" foot={<span className="text-ink-2">5 monitored assets</span>}>
         {fmt(availability, 2)}
         <Unit>%</Unit>
@@ -79,6 +80,18 @@ export function KpiStrip({ kpi, rangeLabel, critical, activeCount }: Props) {
           {critical.length}
           {critical.length > 0 && <span className="size-3 animate-pulse rounded-full bg-critical" />}
         </span>
+      </Tile>
+      {/* Baseline lomba tidak punya data HSE: jangan tampilkan angka, nol, atau tren palsu */}
+      <Tile
+        label="HSE Incidents"
+        foot={
+          <span className="flex flex-col items-start gap-1.5 font-sans text-ink-2">
+            <StatusLabel>Data not in baseline</StatusLabel>
+            Dedicated HSE data source required.
+          </span>
+        }
+      >
+        <span className="font-sans text-[22px] font-medium text-ink-2">Phase 2</span>
       </Tile>
     </Card>
   )
