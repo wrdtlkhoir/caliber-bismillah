@@ -29,6 +29,7 @@ import { CapaTable } from '@/features/actions/CapaTable'
 import { VerificationChart } from '@/features/actions/VerificationChart'
 import { capaKey, type PersistedCapa } from '@/lib/capaStore'
 import { useDecision } from '@/lib/useDecision'
+import { AsOfBadge, rcaPendingMessage, ReplayGate } from '@/features/shared/AsOf'
 import { useRole } from '@/lib/role'
 import { usePersistentState } from '@/lib/usePersistentState'
 
@@ -39,6 +40,36 @@ export default function Actions() {
   const ac = useMemo(() => (asset ? buildActionCase(asset, asOf) : null), [asset, asOf])
 
   if (!asset || !ac) return <Navigate to={`/actions/${rankProblems(buildProblems(asOf))[0]?.id ?? 'KO-3201'}`} replace />
+  // CAPA berasal dari laporan RCA: sebelum terbit, belum ada action plan pada tanggal replay ini
+  if (ac.rca.dateReported > asOf)
+    return (
+      <div className="mx-auto max-w-[1440px] space-y-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <nav className="flex items-center gap-1.5 text-[13.5px] text-ink-2" aria-label="Breadcrumb">
+              <Link to="/" className="hover:text-ink">Plant</Link> › <span>{plantLabel(asset.plant)}</span> ›{' '}
+              <Link to={`/investigation/${asset.tag}`} className="font-mono hover:text-ink">{asset.tag}</Link> ›{' '}
+              <Link to={`/actions?asset=${asset.tag}`} className="hover:text-ink">All actions</Link> ›{' '}
+              <span className="text-ink">Action &amp; Reliability Loop</span>
+            </nav>
+            <h1 className="mt-1 text-[30px] font-semibold tracking-tight text-navy-900">Action &amp; Reliability Loop</h1>
+            <p className="text-[16px] text-ink-2">What should we do, and did it actually work?</p>
+          </div>
+          <AsOfBadge />
+        </div>
+        <ReplayGate
+          title="No action plan yet"
+          message={rcaPendingMessage(asset, asOf, 'CAPA action plan')}
+          availableFrom={ac.rca.dateReported}
+          availableLabel="CAPA available from"
+          actions={
+            <Link to={`/actions?asset=${asset.tag}`} className="text-[14px] font-medium text-navy-700 hover:underline">
+              View All Actions
+            </Link>
+          }
+        />
+      </div>
+    )
   return <ActionsView key={asset.tag} problem={buildProblem(asset, asOf)} ac={ac} asOf={asOf} />
 }
 
@@ -108,17 +139,13 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
           <h1 className="mt-1 text-[30px] font-semibold tracking-tight text-navy-900">Action &amp; Reliability Loop</h1>
           <p className="text-[16px] text-ink-2">What should we do, and did it actually work?</p>
         </div>
-        <p className="flex items-center gap-2 text-[14px] text-ink-2">
-          MTO No.: <Mono className="rounded bg-info-soft px-2 py-1 text-[13px] font-semibold text-navy-800">{ac.contextCycle}</Mono>
-        </p>
+        <div className="flex flex-col items-end gap-2">
+          <AsOfBadge />
+          <p className="flex items-center gap-2 text-[14px] text-ink-2">
+            MTO No.: <Mono className="rounded bg-info-soft px-2 py-1 text-[13px] font-semibold text-navy-800">{ac.contextCycle}</Mono>
+          </p>
+        </div>
       </div>
-
-      {ac.preFailure && (
-        <p className="flex items-center gap-2 rounded-lg border border-medium/30 bg-medium-soft px-4 py-2.5 text-[14px] text-ink">
-          <TriangleAlert className="size-4 shrink-0 text-[#b7860b]" />
-          At the replay date ({fmtDate(asOf)}) this failure has not happened yet. The CAPA below is the record from {ac.rca.arNo}, reported {fmtDate(ac.rca.dateReported)}.
-        </p>
-      )}
 
       {/* Asset strip */}
       <Card className="grid items-center gap-4 px-5 py-4 lg:grid-cols-[minmax(0,1fr)_auto] 2xl:grid-cols-[auto_minmax(0,1fr)_auto]">

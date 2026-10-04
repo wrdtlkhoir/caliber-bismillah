@@ -10,6 +10,7 @@ import { formatDue, PRIORITY_STYLE, STATUS_STYLE, TYPE_STYLE } from '@/features/
 import { fmtDate, useAsOf } from '@/lib/asOf'
 import { readCapa, writeCapa } from '@/lib/capaStore'
 import { useRole } from '@/lib/role'
+import { AsOfBadge } from '@/features/shared/AsOf'
 
 type StatusFilter = 'all' | 'open' | ActionStatus
 type SortKey = 'due' | 'priority' | 'status' | 'type' | 'asset'
@@ -120,7 +121,8 @@ export default function AllActions() {
     <div className="mx-auto max-w-[1440px] space-y-5">
       <div>
         <h1 className="text-[30px] font-semibold tracking-tight text-ink">Action &amp; Reliability</h1>
-        <p className="text-[15px] text-ink-2">All CAPA actions across problems, as of {fmtDate(asOf)}</p>
+        <p className="text-[15px] text-ink-2">All CAPA actions across problems</p>
+        <AsOfBadge className="mt-2" />
         <p className="mt-2 text-[13.5px] text-ink-2 tabular">
           <span className="font-medium text-ink">{allRows.length}</span> actions from {scope.length} RCA report{scope.length === 1 ? '' : 's'} ·{' '}
           <span className="font-medium text-ink">{openCount}</span> open ·{' '}

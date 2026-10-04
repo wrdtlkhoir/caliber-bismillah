@@ -12,6 +12,7 @@ import { rankProblems } from '@/lib/ahp'
 import { fmtDate, useAsOf } from '@/lib/asOf'
 import { exportDossier } from '@/lib/dossier'
 import { useRole } from '@/lib/role'
+import { AsOfBadge } from '@/features/shared/AsOf'
 import { AskCaliberChat } from '@/features/investigation/AskCaliberChat'
 import { AssetSummary } from '@/features/investigation/AssetSummary'
 import { PiReplay } from '@/features/investigation/PiReplay'
@@ -63,6 +64,7 @@ function InvestigationView({ asset, asOf }: { asset: Asset; asOf: string }) {
           <h1 className="mt-1 text-[30px] font-semibold tracking-tight text-ink">
             {asset.tag}: {inv.headline}
           </h1>
+          <AsOfBadge className="mt-2" />
         </div>
 
         <div className="flex flex-wrap gap-3">

@@ -24,6 +24,16 @@ export function readCapa(tag: string, initial: CapaAction[]): PersistedCapa {
   return { actions: initial, state: 'open', reviews: {} }
 }
 
+/** Daftar CAPA tersimpan untuk aset ini, atau null kalau user belum pernah mengubahnya. */
+export function storedCapa(tag: string): CapaAction[] | null {
+  try {
+    const raw = localStorage.getItem(capaKey(tag))
+    return raw ? (JSON.parse(raw) as PersistedCapa).actions : null
+  } catch {
+    return null
+  }
+}
+
 export function writeCapa(tag: string, value: PersistedCapa) {
   try {
     localStorage.setItem(capaKey(tag), JSON.stringify(value))

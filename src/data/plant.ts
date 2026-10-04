@@ -13,6 +13,7 @@ import {
   type ParamHealth,
 } from '@/lib/analytics'
 import { addDays, daysBetween, fmtDate } from '@/lib/asOf'
+import { storedCapa } from '@/lib/capaStore'
 import { assets, incidentOf, incidents, type Asset, type CmParam } from './dataset'
 import type { Kpi, LifecycleStage, Problem, ProblemStatus, Severity, Signal, SignalIcon, UnitImpact, UrgentAction } from './types'
 
@@ -69,10 +70,27 @@ const maxOf = (f: (a: Asset) => number) => Math.max(...assets.map(f))
 const MAX_PROD = maxOf((a) => a.rca?.impact.productionLossT ?? 0)
 const MAX_LOSS = maxOf((a) => a.rca?.impact.lossK ?? 0)
 
-export function openActionsOf(a: Asset, asOf: string) {
-  if (!a.rca || a.rca.dateReported > asOf) return []
-  return a.rca.actions.filter((x) => x.status !== 'Closed')
+interface CapaItem {
+  text: string
+  planDate: string
+  pic: string
+  inProgress: boolean
+  done: boolean
 }
+
+/**
+ * CAPA aset pada tanggal replay (kosong sebelum laporan RCA terbit). Kalau user sudah mengubah status
+ * di All Actions / loop per aset, versi tersimpan itu yang dipakai supaya semua halaman konsisten.
+ */
+export function capaOf(a: Asset, asOf: string): CapaItem[] {
+  if (!a.rca || a.rca.dateReported > asOf) return []
+  const saved = storedCapa(a.tag)
+  if (saved)
+    return saved.map((x) => ({ text: x.title, planDate: x.due, pic: x.owner, inProgress: x.status === 'In progress', done: x.status === 'Done' }))
+  return a.rca.actions.map((x) => ({ text: x.text, planDate: x.planDate, pic: x.pic, inProgress: x.status === 'In Progress', done: x.status === 'Closed' }))
+}
+
+export const openActionsOf = (a: Asset, asOf: string) => capaOf(a, asOf).filter((x) => !x.done)
 
 export function buildProblem(a: Asset, asOf: string): Problem {
   const h = assetHealth(a, asOf)
@@ -99,7 +117,7 @@ export function buildProblem(a: Asset, asOf: string): Problem {
   let signals: Signal[] = []
   if (h.phase === 'post-repair') {
     const primary = h.params.find((x) => x.param.key === 'p1') ?? p0
-    const total = a.rca?.actions.length ?? 0
+    const total = capaOf(a, asOf).length
     title = `Post-failure CAPA: ${a.failureMode}`
     signals = [
       { label: `Restored: ${primary.param.label} ${fmtValue(primary.param, primary.value)} ${primary.param.unit}`, tone: 'neutral', icon: 'check' },
@@ -169,7 +187,7 @@ export function urgentActionsAt(asOf: string): { items: UrgentAction[]; total: n
         overdue,
         task: x.text,
         owner: x.pic,
-        status: overdue ? 'At Risk' : x.status === 'In Progress' ? 'In Progress' : days <= 30 ? 'Scheduled' : 'On Track',
+        status: overdue ? 'At Risk' : x.inProgress ? 'In Progress' : days <= 30 ? 'Scheduled' : 'On Track',
       }
     }),
   )

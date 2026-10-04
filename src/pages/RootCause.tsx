@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { Card, Mono } from '@/components/ui/Card'
 import { useToast } from '@/components/ui/Toast'
-import { assetByTag } from '@/data/dataset'
+import { assetByTag, type Asset } from '@/data/dataset'
 import { buildProblem, buildProblems, currentUser, plantLabel } from '@/data/plant'
 import { buildRootCause, type RootCauseCase } from '@/data/rootCause'
 import { rankProblems } from '@/lib/ahp'
@@ -17,6 +17,7 @@ import { useConstraints } from '@/lib/constraints'
 import { useDecision } from '@/lib/useDecision'
 import { usePairwise } from '@/lib/usePairwise'
 import { formatDetected } from '@/features/investigation/AssetSummary'
+import { AsOfBadge, rcaPendingMessage, ReplayGate } from '@/features/shared/AsOf'
 import { AuditTrail } from '@/features/rootcause/AuditTrail'
 import { ConstraintsEditor, ConstraintsPanel } from '@/features/rootcause/ConstraintsPanel'
 import { SolutionImpact } from '@/features/rootcause/SolutionImpact'
@@ -35,7 +36,41 @@ export default function RootCause() {
   const rc = useMemo(() => (asset ? buildRootCause(asset, asOf) : null), [asset, asOf])
 
   if (!asset || !rc) return <Navigate to={`/root-cause/${rankProblems(buildProblems(asOf))[0]?.id ?? 'KO-3201'}`} replace />
+  // Laporan RCA belum terbit pada tanggal replay: jangan tampilkan hipotesis/keputusan dari masa depan
+  if (asset.rca && asset.rca.dateReported > asOf) return <RcaPending asset={asset} asOf={asOf} />
   return <RootCauseView key={asset.tag} problem={buildProblem(asset, asOf)} rc={rc} />
+}
+
+function RcaPending({ asset, asOf }: { asset: Asset; asOf: string }) {
+  return (
+    <div className="mx-auto max-w-[1440px] space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <nav className="font-mono text-[13.5px] text-ink-2" aria-label="Breadcrumb">
+            <Link to="/" className="hover:text-ink">Plant</Link> / {asset.plant} /{' '}
+            <Link to={`/investigation/${asset.tag}`} className="font-semibold text-ink hover:underline">
+              {asset.tag}
+            </Link>{' '}
+            / <span className="text-teal">Root Cause &amp; Decision</span>
+          </nav>
+          <h1 className="mt-1 text-[28px] font-semibold tracking-tight text-ink">Root Cause &amp; Decision Synthesis</h1>
+          <p className="text-[16px] text-ink-2">Why is it happening, and which hypothesis should we verify first?</p>
+        </div>
+        <AsOfBadge />
+      </div>
+      <ReplayGate
+        title="Root cause analysis not available yet"
+        message={rcaPendingMessage(asset, asOf, 'root-cause hypothesis or engineer decision')}
+        availableFrom={asset.rca!.dateReported}
+        availableLabel="RCA report available from"
+        actions={
+          <Link to={`/investigation/${asset.tag}`} className="text-[14px] font-medium text-navy-700 hover:underline">
+            Back to Problem Investigation
+          </Link>
+        }
+      />
+    </div>
+  )
 }
 
 function RootCauseView({ problem, rc }: { problem: Problem; rc: RootCauseCase }) {
@@ -153,9 +188,12 @@ function RootCauseView({ problem, rc }: { problem: Problem; rc: RootCauseCase })
           <h1 className="mt-1 text-[28px] font-semibold tracking-tight text-ink">Root Cause &amp; Decision Synthesis</h1>
           <p className="text-[16px] text-ink-2">Why is it happening, and which hypothesis should we verify first?</p>
         </div>
-        <p className="flex items-center gap-2 text-[14px] text-ink-2">
-          <Waypoints className="size-4 text-teal" /> {ENGINE}
-        </p>
+        <div className="flex flex-col items-end gap-2">
+          <AsOfBadge />
+          <p className="flex items-center gap-2 text-[14px] text-ink-2">
+            <Waypoints className="size-4 text-teal" /> {ENGINE}
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_440px] 2xl:grid-cols-[minmax(0,1fr)_520px]">
