@@ -6,7 +6,9 @@ import { NAV } from '@/components/layout/Sidebar'
 import { assetByTag } from '@/data/dataset'
 import Actions from '@/pages/Actions'
 import ComingSoon from '@/pages/ComingSoon'
+import DataSources from '@/pages/DataSources'
 import Investigation from '@/pages/Investigation'
+import KnowledgeBase from '@/pages/KnowledgeBase'
 import Overview from '@/pages/Overview'
 import RootCause from '@/pages/RootCause'
 
@@ -38,7 +40,9 @@ const router = createBrowserRouter([
         element: <Actions />,
         handle: handle(() => ['Action & Reliability', 'Execution & Health']),
       },
-      ...NAV.filter((n) => !['/', '/investigation', '/root-cause', '/actions'].includes(n.to)).map((n) => ({
+      { path: 'knowledge', element: <KnowledgeBase />, handle: handle(() => ['CALIBER', 'Knowledge Base']) },
+      { path: 'data-sources', element: <DataSources />, handle: handle(() => ['CALIBER', 'Data Sources']) },
+      ...NAV.filter((n) => !['/', '/investigation', '/root-cause', '/actions', '/knowledge', '/data-sources'].includes(n.to)).map((n) => ({
         path: n.to,
         element: <ComingSoon />,
         handle: handle(() => ['CALIBER', n.label]),
