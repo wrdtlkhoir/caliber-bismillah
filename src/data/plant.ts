@@ -255,3 +255,24 @@ export function lossParetoAt(asOf: string, days: number): ParetoRow[] {
     return { ...r, cumPct: total ? (run / total) * 100 : 0 }
   })
 }
+
+export interface OperationalIncident {
+  tag: string
+  equipment: string
+  title: string
+  date: string
+  impact: string
+  downtimeH: number
+}
+
+/**
+ * Insiden aset termonitor (Incident DB) yang sudah terjadi pada tanggal replay, terbaru dulu.
+ * Ini konteks operasional, BUKAN event HSE: baseline tidak punya klasifikasi HSE.
+ */
+export function operationalIncidentsAt(asOf: string): OperationalIncident[] {
+  return assets
+    .map((a) => ({ a, inc: incidentOf(a) }))
+    .filter((x): x is { a: Asset; inc: NonNullable<typeof x.inc> } => !!x.inc && x.inc.date <= asOf)
+    .sort((x, y) => y.inc.date.localeCompare(x.inc.date))
+    .map(({ a, inc }) => ({ tag: a.tag, equipment: a.name, title: inc.title, date: inc.date, impact: inc.impact, downtimeH: inc.downtimeH }))
+}

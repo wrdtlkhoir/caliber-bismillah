@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { buildProblems, lifecycleAt, lossParetoAt, overviewKpi, PLANT_SCOPE, plantImpactAt, urgentActionsAt } from '@/data/plant'
+import { buildProblems, lifecycleAt, lossParetoAt, operationalIncidentsAt, overviewKpi, PLANT_SCOPE, plantImpactAt, urgentActionsAt } from '@/data/plant'
 import type { Period } from '@/data/types'
 import { CRITICAL_RISK_THRESHOLD, rankProblems } from '@/lib/ahp'
 import { fmtDate, useAsOf } from '@/lib/asOf'
+import { useRole } from '@/lib/role'
 import { AskCaliber } from '@/features/overview/AskCaliber'
+import { HseSection } from '@/features/overview/HseSection'
 import { KpiStrip } from '@/features/overview/KpiStrip'
 import { LifecyclePipeline } from '@/features/overview/LifecyclePipeline'
 import { PERIOD_PRESETS, PeriodSelect } from '@/features/overview/PeriodSelect'
@@ -15,6 +17,8 @@ import { UrgentActions } from '@/features/overview/UrgentActions'
 
 export default function Overview() {
   const { asOf } = useAsOf()
+  const { role } = useRole()
+  const hseFirst = role === 'HSE Manager'
   const [params, setParams] = useSearchParams()
   const rawQuery = params.get('q') ?? ''
   const q = rawQuery.trim().toLowerCase()
@@ -36,6 +40,7 @@ export default function Overview() {
   const selectedId = ranked.some((p) => p.id === pickedId) ? pickedId : (ranked[0]?.id ?? null)
   const kpi = useMemo(() => overviewKpi(asOf, period.days), [asOf, period.days])
   const stages = useMemo(() => lifecycleAt(asOf), [asOf])
+  const opIncidents = useMemo(() => operationalIncidentsAt(asOf), [asOf])
   const pareto = useMemo(() => lossParetoAt(asOf, period.days), [asOf, period.days])
   const urgent = useMemo(() => urgentActionsAt(asOf), [asOf])
 
@@ -102,6 +107,7 @@ export default function Overview() {
       </div>
 
       <KpiStrip kpi={kpi} rangeLabel={period.short} critical={criticalRisk} activeCount={ranked.length} />
+      {hseFirst && <HseSection incidents={opIncidents} asOf={asOf} />}
       <LifecyclePipeline stages={stages} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -154,6 +160,8 @@ export default function Overview() {
           if (id) document.getElementById('problem-tank')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }}
       />
+
+      {!hseFirst && <HseSection incidents={opIncidents} asOf={asOf} />}
     </div>
   )
 }
