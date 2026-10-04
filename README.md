@@ -199,8 +199,9 @@ tanpa nilai, dan konteks insiden operasional aset termonitor sampai tanggal repl
 ## Aset dari Figma
 
 Desain: [Figma – Caliber](https://www.figma.com/design/zlQH8RYCAdNQyYJQXJvZjD/Caliber?node-id=0-1).
-Logo di `components/layout/BrandMark.tsx` masih placeholder. Untuk menggantinya, export logo resmi sebagai SVG
-ke `public/logo.svg`, lalu ganti `<svg>` di komponen tersebut dengan `<img src="/logo.svg" … />`.
+Logo resmi ada di `public/logo.png` dan ditampilkan oleh `components/layout/BrandMark.tsx`. File aslinya memiliki
+padding transparan lebar, sehingga komponen memotongnya lewat CSS (posisi dalam persen). Kalau file logo diganti
+dengan ukuran kanvas yang berbeda, sesuaikan nilai crop di komponen tersebut.
 
 ## Roadmap
 
