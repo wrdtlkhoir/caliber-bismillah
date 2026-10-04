@@ -5,6 +5,7 @@ import { RoleProvider } from '@/lib/role'
 import { NAV } from '@/components/layout/Sidebar'
 import { assetByTag } from '@/data/dataset'
 import Actions from '@/pages/Actions'
+import AllActions from '@/pages/AllActions'
 import ComingSoon from '@/pages/ComingSoon'
 import DataSources from '@/pages/DataSources'
 import Investigation from '@/pages/Investigation'
@@ -34,11 +35,11 @@ const router = createBrowserRouter([
         element: <RootCause />,
         handle: handle((p) => ['Plant', assetByTag(p.id)?.plant ?? 'Plant', p.id ?? '', 'Root Cause & Decision']),
       },
-      { path: 'actions', element: <Actions /> },
+      { path: 'actions', element: <AllActions />, handle: handle(() => ['Action & Reliability', 'All Actions']) },
       {
         path: 'actions/:id',
         element: <Actions />,
-        handle: handle(() => ['Action & Reliability', 'Execution & Health']),
+        handle: handle((p) => ['Action & Reliability', p.id ?? '', 'Reliability Loop']),
       },
       { path: 'knowledge', element: <KnowledgeBase />, handle: handle(() => ['CALIBER', 'Knowledge Base']) },
       { path: 'data-sources', element: <DataSources />, handle: handle(() => ['CALIBER', 'Data Sources']) },

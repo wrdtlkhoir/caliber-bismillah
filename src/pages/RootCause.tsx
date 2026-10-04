@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { BadgeCheck, CircleUserRound, Clock, Download, ListOrdered, MapPin, Waypoints, Wrench } from 'lucide-react'
+import { ArrowRight, BadgeCheck, CircleUserRound, Clock, Download, ListOrdered, MapPin, Waypoints, Wrench } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { Card, Mono } from '@/components/ui/Card'
@@ -123,12 +123,20 @@ function RootCauseView({ problem, rc }: { problem: Problem; rc: RootCauseCase })
           <span className="flex items-center gap-2 text-[14.5px] text-ink">
             <BadgeCheck className={clsx('size-5', acceptedId ? 'text-good' : 'text-navy-700')} /> {stage}
           </span>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+          <Link
+            to={`/actions?asset=${problem.id}`}
+            className="flex items-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-[15px] font-medium text-navy-800 hover:border-slate-300"
+          >
+            Go to Action &amp; Reliability <ArrowRight className="size-4" />
+          </Link>
           <button
             onClick={() => exportRcaDossier(problem, a, ranked, decisions, [...rc.audit, ...log], asOf, pairwise.analysis)}
             className="flex items-center gap-2 rounded-lg bg-navy-800 px-5 py-2.5 text-[15.5px] font-medium text-white shadow-card hover:bg-navy-700"
           >
             <Download className="size-4" /> Export RCA Dossier
           </button>
+          </div>
         </div>
       </Card>
 

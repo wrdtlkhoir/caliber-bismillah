@@ -116,7 +116,7 @@ function InvestigationView({ asset, asOf }: { asset: Asset; asOf: string }) {
             onClick={() => navigate(`/root-cause/${asset.tag}`)}
             className="flex items-center gap-3 rounded-lg bg-navy-800 px-5 py-2.5 text-[15px] font-medium text-white shadow-card transition hover:bg-navy-700"
           >
-            Proceed to Root Cause Analysis
+            Go to Root Cause &amp; Decision
             <ArrowRight className="size-4" />
           </button>
         </div>

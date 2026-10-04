@@ -17,7 +17,7 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import { Card, Mono } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
-import { buildActionCase, type ActionCase, type ActionStatus, type CapaAction } from '@/data/actions'
+import { buildActionCase, type ActionCase, type ActionStatus } from '@/data/actions'
 import { assetByTag } from '@/data/dataset'
 import { buildProblem, buildProblems, currentUser, plantLabel } from '@/data/plant'
 import { buildRootCause } from '@/data/rootCause'
@@ -27,17 +27,10 @@ import type { Problem } from '@/data/types'
 import { AddActionModal } from '@/features/actions/AddActionModal'
 import { CapaTable } from '@/features/actions/CapaTable'
 import { VerificationChart } from '@/features/actions/VerificationChart'
+import { capaKey, type PersistedCapa } from '@/lib/capaStore'
 import { useDecision } from '@/lib/useDecision'
 import { useRole } from '@/lib/role'
 import { usePersistentState } from '@/lib/usePersistentState'
-
-type CapaState = 'open' | 'closed' | 'escalated'
-
-interface PersistedCapa {
-  actions: CapaAction[]
-  state: CapaState
-  reviews: Record<string, string>
-}
 
 export default function Actions() {
   const { id } = useParams()
@@ -50,7 +43,7 @@ export default function Actions() {
 }
 
 function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; asOf: string }) {
-  const [capa, setCapa] = usePersistentState<PersistedCapa>(`caliber.capa.v2.${problem.id}`, { actions: ac.actions, state: 'open', reviews: {} })
+  const [capa, setCapa] = usePersistentState<PersistedCapa>(capaKey(problem.id), { actions: ac.actions, state: 'open', reviews: {} })
   const rcCase = useMemo(() => buildRootCause(ac.asset, asOf), [ac.asset, asOf])
   const { decisions, log } = useDecision(problem.id)
   const [addOpen, setAddOpen] = useState(false)
@@ -109,6 +102,7 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
           <nav className="flex items-center gap-1.5 text-[13.5px] text-ink-2" aria-label="Breadcrumb">
             <Link to="/" className="hover:text-ink">Plant</Link> › <span>{plantLabel(ac.asset.plant)}</span> ›{' '}
             <Link to={`/investigation/${problem.id}`} className="font-mono hover:text-ink">{problem.id}</Link> ›{' '}
+            <Link to={`/actions?asset=${problem.id}`} className="hover:text-ink">All actions</Link> ›{' '}
             <span className="text-ink">Action &amp; Reliability Loop</span>
           </nav>
           <h1 className="mt-1 text-[30px] font-semibold tracking-tight text-navy-900">Action &amp; Reliability Loop</h1>

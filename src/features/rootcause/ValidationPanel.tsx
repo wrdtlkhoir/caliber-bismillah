@@ -59,7 +59,7 @@ export function ValidationPanel({ h, decision, acceptedId, placeholder, onAction
           </p>
           <p className="mt-1 text-[14px] text-ink">{h.title}</p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Link to={`/actions/${problemId}`} className="flex items-center gap-2 rounded-lg bg-navy-800 px-4 py-2 text-[14.5px] font-medium text-white hover:bg-navy-700">
+            <Link to={`/actions?asset=${problemId}`} className="flex items-center gap-2 rounded-lg bg-navy-800 px-4 py-2 text-[14.5px] font-medium text-white hover:bg-navy-700">
               Proceed to Action Plan <ArrowRight className="size-4" />
             </Link>
             <button

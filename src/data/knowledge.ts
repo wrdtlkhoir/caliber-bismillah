@@ -576,9 +576,9 @@ export const KB_ENTRIES: KbEntry[] = [
     term: 'Energy Intensity',
     category: 'Energy',
     definition: 'Energy consumed per unit of production (for example GJ per ton).',
-    why: 'Not computed in CALIBER: the baseline has no energy consumption data (only motor ampere). Listed as a future / Phase 2 metric.',
+    why: 'Not computed in CALIBER: the baseline has no energy consumption data (only motor ampere). Listed as a Phase 2 metric in HSE & Safety.',
     related: [],
-    usedIn: ['Plant Intelligence', 'Data Sources'],
+    usedIn: ['Plant Intelligence'],
     source: 'General industrial definition',
   },
 ]

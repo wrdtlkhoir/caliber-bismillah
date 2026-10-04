@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import { ChevronDown, ChevronLeft, ChevronRight, LayoutGrid, List, Search, SearchX, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Mono } from '@/components/ui/Card'
 import type { Severity } from '@/data/types'
 import type { RankedProblem } from '@/lib/ahp'
@@ -57,6 +57,12 @@ interface Props {
 
 export function ProblemTank({ pool, filter, onFilter, sort, onSort, query, onQuery, selectedId, hoveredId, onSelect, onHover, assistant, emptyHint, onClearFilters, focus }: Props) {
   const [view, setView] = useState<View>(() => (pool.length > 6 ? 'list' : 'cards'))
+  const navigate = useNavigate()
+  // Klik problem = drill-down ke Problem Investigation (tidak ada lagi di sidebar)
+  const open = (id: string) => {
+    onSelect(id)
+    navigate(`/investigation/${id}`)
+  }
   const visible = sortProblems(filter === 'all' ? pool : pool.filter((p) => p.severity === filter), sort)
   const count = (f: SevFilter) => (f === 'all' ? pool.length : pool.filter((p) => p.severity === f).length)
 
@@ -150,11 +156,11 @@ export function ProblemTank({ pool, filter, onFilter, sort, onSort, query, onQue
       {view === 'cards' ? (
         <div className="space-y-4">
           {shown.map((p, i) => (
-            <ProblemCard key={p.id} index={i} problem={p} selected={selectedId === p.id} highlighted={hoveredId === p.id} onSelect={() => onSelect(p.id)} onHover={onHover} />
+            <ProblemCard key={p.id} index={i} problem={p} selected={selectedId === p.id} highlighted={hoveredId === p.id} onSelect={() => open(p.id)} onHover={onHover} />
           ))}
         </div>
       ) : (
-        visible.length > 0 && <ProblemList problems={shown} selectedId={selectedId} hoveredId={hoveredId} onSelect={onSelect} onHover={onHover} />
+        visible.length > 0 && <ProblemList problems={shown} selectedId={selectedId} hoveredId={hoveredId} onSelect={open} onHover={onHover} />
       )}
 
       {pageCount > 1 && <Pagination page={page} pageCount={pageCount} size={size} total={visible.length} onPage={setPage} />}

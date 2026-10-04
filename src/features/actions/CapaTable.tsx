@@ -4,19 +4,19 @@ import { useEffect, useState } from 'react'
 import { Mono } from '@/components/ui/Card'
 import type { ActionPriority, ActionStatus, ActionType, CapaAction } from '@/data/actions'
 
-const TYPE: Record<ActionType, string> = {
+export const TYPE_STYLE: Record<ActionType, string> = {
   Corrective: 'bg-info-soft text-navy-700',
   Preventive: 'bg-teal-soft text-teal',
   Proactive: 'bg-good-soft text-good',
 }
 
-const PRIORITY: Record<ActionPriority, string> = {
+export const PRIORITY_STYLE: Record<ActionPriority, string> = {
   Critical: 'bg-critical-soft text-critical',
   High: 'bg-high-soft text-high',
   Medium: 'bg-slate-100 text-ink',
 }
 
-const STATUS: Record<ActionStatus, string> = {
+export const STATUS_STYLE: Record<ActionStatus, string> = {
   Done: 'bg-good-soft text-good',
   'In progress': 'bg-info-soft text-navy-700',
   'Not started': 'bg-slate-100 text-ink-2',
@@ -166,7 +166,7 @@ export function CapaTable({ actions, highlightId, onStatus, refDate, readOnly, r
                   <Mono className={clsx('mt-1 block text-[12.5px]', a.type === 'Preventive' ? 'text-teal' : 'text-ink-2')}>{a.ref}</Mono>
                 </td>
                 <td className="px-3 py-4">
-                  <span className={clsx('rounded px-2 py-0.5 text-[14px]', TYPE[a.type])}>{a.type}</span>
+                  <span className={clsx('rounded px-2 py-0.5 text-[14px]', TYPE_STYLE[a.type])}>{a.type}</span>
                 </td>
                 <td className="px-3 py-4">
                   <span className="flex items-center gap-2 whitespace-nowrap text-[15px] text-ink">
@@ -179,15 +179,15 @@ export function CapaTable({ actions, highlightId, onStatus, refDate, readOnly, r
                   {isOverdue(a, refDate) && <span className="block text-[12px] text-critical">Overdue</span>}
                 </td>
                 <td className="px-3 py-4">
-                  <span className={clsx('rounded px-2 py-0.5 text-[14px]', PRIORITY[a.priority])}>{a.priority}</span>
+                  <span className={clsx('rounded px-2 py-0.5 text-[14px]', PRIORITY_STYLE[a.priority])}>{a.priority}</span>
                 </td>
                 <td className="px-3 py-4">
                   {readOnly ? (
-                    <span className={clsx('inline-block whitespace-nowrap rounded px-2 py-0.5 text-[14px]', STATUS[a.status])} title={readOnlyTitle}>
+                    <span className={clsx('inline-block whitespace-nowrap rounded px-2 py-0.5 text-[14px]', STATUS_STYLE[a.status])} title={readOnlyTitle}>
                       {a.status}
                     </span>
                   ) : (
-                  <label className={clsx('relative inline-flex items-center rounded text-[14px]', STATUS[a.status])}>
+                  <label className={clsx('relative inline-flex items-center rounded text-[14px]', STATUS_STYLE[a.status])}>
                     <select
                       value={a.status}
                       onChange={(e) => onStatus(a.id, e.target.value as ActionStatus)}

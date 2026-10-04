@@ -3,12 +3,12 @@
  *
  * Pemisahan penting: "domain data" (mis. Production) ≠ "format file baseline lomba" (XLSX).
  * Format XLSX/PPTX adalah cara panitia membagikan dataset, bukan sistem sumber di plant.
- * Coverage dan field diambil dari dataset hasil ETL; sistem "future" murni konseptual.
+ * Coverage dan field diambil dari dataset hasil ETL. Hanya sumber yang benar-benar ada di baseline.
  */
 import { fmtDate } from '@/lib/asOf'
 import { assets, incidents, sourceFiles, type SourceFile } from './dataset'
 
-export type SourceStatus = 'Available' | 'Partial' | 'Not connected' | 'Dummy'
+export type SourceStatus = 'Available' | 'Partial'
 
 export interface FieldGroup {
   label: string
@@ -32,15 +32,6 @@ export interface BaselineSource {
   files: SourceFile[]
   fieldGroups: FieldGroup[]
   usedIn: string[]
-  /** integrasi masa depan — konseptual, tidak terhubung */
-  future?: string
-}
-
-export interface FutureSource {
-  id: string
-  name: string
-  purpose: string
-  justification: string
 }
 
 const filesIn = (folder: string) => sourceFiles.filter((f) => f.folder === folder)
@@ -83,7 +74,6 @@ export const BASELINE_SOURCES: BaselineSource[] = [
       },
     ],
     usedIn: ['Problem Investigation: Historical PI Telemetry'],
-    future: 'PI / historian integration',
   },
   {
     id: 'equipment',
@@ -202,39 +192,5 @@ export const BASELINE_SOURCES: BaselineSource[] = [
       },
     ],
     usedIn: ['Root Cause & Decision: hypotheses, evidence, audit trail', 'Action & Reliability: CAPA, PM schedule, risk analysis'],
-  },
-]
-
-/** Sumber tambahan yang diusulkan. Semua "Future / Conceptual" dan tidak terhubung. */
-export const FUTURE_SOURCES: FutureSource[] = [
-  {
-    id: 'pi',
-    name: 'Future PI / Historian Integration',
-    purpose: 'Near-real-time equipment and process telemetry',
-    justification: 'Baseline PI data is a historical ~30-day extract per asset; continuous telemetry would extend early warning beyond the failure windows.',
-  },
-  {
-    id: 'hse',
-    name: 'HSE Management System',
-    purpose: 'Safety incidents, inspections, environmental events, permits, and HSE performance indicators',
-    justification: 'The baseline has no HSE classification, so the HSE KPI and status on Plant Intelligence remain Phase 2.',
-  },
-  {
-    id: 'energy',
-    name: 'Energy Management System',
-    purpose: 'Energy consumption and energy intensity',
-    justification: 'Baseline PI data only includes motor ampere, which is not enough to compute energy consumption.',
-  },
-  {
-    id: 'emissions',
-    name: 'Emissions',
-    purpose: 'HSE/Energy system data required',
-    justification: 'No emission data exists in the baseline; no values are shown.',
-  },
-  {
-    id: 'erp',
-    name: 'Financial / ERP System',
-    purpose: 'Financial reconciliation and business impact',
-    justification: 'Loss values in the baseline are operational estimates; no accounting records or CoA exist.',
   },
 ]

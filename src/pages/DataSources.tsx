@@ -4,13 +4,13 @@ import { Card, Mono } from '@/components/ui/Card'
 import { Drawer } from '@/components/ui/Drawer'
 import { StatusLabel, type StatusTone } from '@/components/ui/StatusLabel'
 import { useToast } from '@/components/ui/Toast'
-import { BASELINE_SOURCES, FUTURE_SOURCES, type BaselineSource, type SourceStatus } from '@/data/sources'
+import { BASELINE_SOURCES, type BaselineSource, type SourceStatus } from '@/data/sources'
 import { fmtDate } from '@/lib/asOf'
 import { useRole } from '@/lib/role'
 import { usePersistentState } from '@/lib/usePersistentState'
 import { UploadModal, type PendingUpload } from '@/features/datasources/UploadModal'
 
-const TONE: Record<SourceStatus, StatusTone> = { Available: 'good', Partial: 'medium', 'Not connected': 'neutral', Dummy: 'neutral' }
+const TONE: Record<SourceStatus, StatusTone> = { Available: 'good', Partial: 'medium' }
 
 const th = 'px-3 py-2.5 font-medium'
 const td = 'px-3 py-3 align-top'
@@ -28,7 +28,7 @@ export default function DataSources() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-[30px] font-semibold tracking-tight text-ink">Data Sources</h1>
-          <p className="text-[15px] text-ink-2">Baseline datasets behind CALIBER, their coverage, and proposed future sources</p>
+          <p className="text-[15px] text-ink-2">Baseline datasets behind CALIBER and their coverage</p>
         </div>
         <button
           onClick={() => setUploadOpen(true)}
@@ -86,40 +86,6 @@ export default function DataSources() {
                   <td className={`${td} pr-5`}>
                     <Mono className="whitespace-nowrap text-ink">{fmtDate(s.lastAvailable)}</Mono>
                     <p className="text-[12px] text-ink-3">Historical baseline</p>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      {/* Future */}
-      <Card className="overflow-hidden">
-        <header className="px-5 pb-3 pt-5">
-          <h2 className="flex flex-wrap items-center gap-2 text-lg font-medium text-ink">
-            Future / additional data sources <StatusLabel dashed>Future / Conceptual</StatusLabel>
-          </h2>
-          <p className="text-[13px] text-ink-2">Proposed sources with a business justification. None of these are connected to CALIBER.</p>
-        </header>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-left text-[13.5px]">
-            <thead>
-              <tr className="border-y border-line bg-slate-50 text-[12.5px] text-ink-2">
-                <th className={`${th} pl-5`}>Source</th>
-                <th className={th}>Purpose</th>
-                <th className={th}>Why it is needed</th>
-                <th className={`${th} pr-5`}>Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {FUTURE_SOURCES.map((f) => (
-                <tr key={f.id}>
-                  <td className={`${td} pl-5 font-medium text-ink`}>{f.name}</td>
-                  <td className={`${td} text-ink-2`}>{f.purpose}</td>
-                  <td className={`${td} max-w-[420px] text-ink-2`}>{f.justification}</td>
-                  <td className={`${td} pr-5`}>
-                    <StatusLabel dashed>Not connected</StatusLabel>
                   </td>
                 </tr>
               ))}
@@ -250,22 +216,17 @@ function SourceDetail({ s }: { s: BaselineSource }) {
         </span>
         {s.statusNote && <p className="mt-1 text-[13px] text-ink-2">{s.statusNote}</p>}
       </Row>
-      {s.future && (
-        <Row label="Potential future integration">
-          {s.future} <StatusLabel dashed>Future / Conceptual</StatusLabel>
-        </Row>
-      )}
     </dl>
   )
 }
 
-/** Arsitektur ringkas: baseline → snapshot → analytics → keputusan; lapisan future terpisah & tidak tersambung. */
+/** Arsitektur ringkas: baseline → snapshot → analytics → keputusan. */
 function Architecture() {
   const box = 'rounded-[7px] border border-line bg-white px-3 py-2 text-center'
   return (
     <Card className="p-5">
       <h2 className="text-lg font-medium text-ink">Data architecture</h2>
-      <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
+      <div className="mt-4">
         <div className="flex flex-col items-center gap-1.5">
           <div className="grid w-full grid-cols-2 gap-2 md:grid-cols-4">
             {BASELINE_SOURCES.map((s) => (
@@ -291,19 +252,6 @@ function Architecture() {
           </div>
         </div>
 
-        <div className="rounded-lg border border-dashed border-slate-300 p-3">
-          <p className="flex items-center justify-between gap-2 text-[13px] font-medium text-ink-2">
-            Future layer <StatusLabel dashed>Not connected</StatusLabel>
-          </p>
-          <ul className="mt-2 space-y-1.5">
-            {['PI / Historian', 'HSE System', 'Energy System', 'ERP / Finance'].map((n) => (
-              <li key={n} className="rounded-[7px] border border-dashed border-slate-300 px-3 py-1.5 text-[13px] text-ink-2">
-                {n}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-[12px] text-ink-3">Conceptual only. Not integrated with CALIBER.</p>
-        </div>
       </div>
     </Card>
   )
