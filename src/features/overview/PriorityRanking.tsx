@@ -43,9 +43,9 @@ export function PriorityRanking({ ranked, selectedId, hoveredId, onSelect, onHov
 
       {view === 'pareto' ? (
         <>
-          <p className="mt-1 text-[13px] leading-snug text-ink-2">Total loss (k US$) by equipment type, Incident Database, {periodLabel}</p>
+          <p className="mt-1 text-[13px] leading-snug text-ink-2">Which failure mechanisms drive total loss, {periodLabel}</p>
           <div className="mt-3">
-            <LossPareto rows={pareto} />
+            <LossPareto rows={pareto} periodLabel={periodLabel} />
           </div>
         </>
       ) : (

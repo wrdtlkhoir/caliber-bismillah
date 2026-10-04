@@ -5,6 +5,7 @@ import {
   assetHealth,
   incidentsInWindow,
   kpis,
+  mechanismOf,
   plantImpact,
   readingsUpTo,
   similarIncidents,
@@ -231,29 +232,42 @@ export function plantImpactAt(asOf: string, days: number, problemPlants: string[
 }
 
 export interface ParetoRow {
-  code: string
+  /** kategori = mekanisme kegagalan (F Mechanism, dinormalisasi oleh mechanismOf) */
+  category: string
   lossK: number
   count: number
-  /** persentase kumulatif sampai baris ini (0–100) */
+  /** porsi kategori ini terhadap total loss (0–100) */
+  sharePct: number
+  /** persentase kumulatif sampai kategori ini (0–100) */
   cumPct: number
 }
 
-/** Pareto Total Loss (k US$) Incident DB per tipe equipment, dalam periode yang berakhir di as-of. */
+/**
+ * Pareto Total Loss (k US$, actual + potential) Incident DB per mekanisme kegagalan,
+ * untuk insiden dalam periode yang berakhir di tanggal replay. Diurutkan dari kontribusi terbesar.
+ */
 export function lossParetoAt(asOf: string, days: number): ParetoRow[] {
   const m = new Map<string, { lossK: number; count: number }>()
   for (const i of incidentsInWindow(asOf, days)) {
-    const e = m.get(i.eqType) ?? { lossK: 0, count: 0 }
+    const key = mechanismOf(i)
+    const e = m.get(key) ?? { lossK: 0, count: 0 }
     e.lossK += i.totalLossK
     e.count += 1
-    m.set(i.eqType, e)
+    m.set(key, e)
   }
-  const rows = [...m.entries()].map(([code, v]) => ({ code, ...v })).sort((x, y) => y.lossK - x.lossK)
+  const rows = [...m.entries()].map(([category, v]) => ({ category, ...v })).sort((x, y) => y.lossK - x.lossK || y.count - x.count)
   const total = rows.reduce((s, r) => s + r.lossK, 0)
   let run = 0
   return rows.map((r) => {
     run += r.lossK
-    return { ...r, cumPct: total ? (run / total) * 100 : 0 }
+    return { ...r, sharePct: total ? (r.lossK / total) * 100 : 0, cumPct: total ? (run / total) * 100 : 0 }
   })
+}
+
+/** Kontributor utama = kategori teratas sampai kumulatif pertama kali mencapai `cutoff` %. */
+export function paretoHead(rows: ParetoRow[], cutoff = 80) {
+  const i = rows.findIndex((r) => r.cumPct >= cutoff - 1e-9)
+  return i < 0 ? rows.length : i + 1
 }
 
 export interface OperationalIncident {

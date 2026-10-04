@@ -508,7 +508,7 @@ export const KB_ENTRIES: KbEntry[] = [
     term: 'Pareto Analysis',
     category: 'Data & Analytics',
     definition: 'Sorting contributors from largest to smallest with a cumulative percentage to find the few that account for most of the effect (often 80%).',
-    why: 'The Pareto tab of Risk Priority Ranking shows total loss by equipment type for the selected period.',
+    why: 'The Pareto tab of Risk Priority Ranking ranks failure mechanisms by total loss for the selected period, with a cumulative line and an 80% reference. 80% is a prioritisation reference, not a target.',
     related: ['Risk Priority Score', 'Total Loss'],
     usedIn: ['Plant Intelligence'],
     source: 'General industrial definition',

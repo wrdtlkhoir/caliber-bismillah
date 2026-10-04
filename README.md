@@ -12,7 +12,7 @@ Incident Database, laporan RCA), bukan data dummy.
 
 > Status: Page 1 Overview, Page 2 Problem Investigation, Page 3 Root Cause & Decision, Page 4 Action & Reliability,
 > Knowledge Base, dan Data Sources sudah jadi. Data HSE, energi, dan finance tidak ada di baseline sehingga
-> ditampilkan sebagai Phase 2 / Future, tanpa angka.
+> ditampilkan sebagai Phase 2, tanpa angka.
 
 ## Menjalankan
 
@@ -128,7 +128,7 @@ src/
   - Aset dengan fase early-warning / alarm / trip / CAPA.
   - Sinyal berisi nilai asli terhadap limit, plus proyeksi "Trip in ~N d".
   - Kotak pencarian, filter severity, urutan, dan pilihan tampilan **Cards / List** supaya tetap rapi saat problem banyak (kartu dibatasi 4 dengan tombol *Show more*).
-  - **Risk Priority Ranking** (skor berbobot 6 kriteria) dengan tab **Pareto**: Total Loss (k US$) Incident DB per tipe equipment dalam periode terpilih, garis kumulatif %, dan referensi 80%. Ada juga Ask CALIBER.
+  - **Risk Priority Ranking** (skor berbobot 6 kriteria) dengan tab **Pareto**: Total Loss (actual + potential, k US$) Incident DB per **mekanisme kegagalan** (F Mechanism) dalam periode terpilih, garis kumulatif %, referensi 80% (acuan prioritas, bukan target), interpretasi kontributor utama, dan tabel peringkat. Ada juga Ask CALIBER.
 - **Urgent Actions**: action CAPA terbuka dari laporan RCA, ditandai *Overdue* relatif terhadap tanggal replay.
 - **Downtime vs Loss by Plant**: data dari Incident Database. Klik plant untuk memfilter problem.
 
@@ -190,7 +190,7 @@ tanpa nilai, dan konteks insiden operasional aset termonitor sampai tanggal repl
   *CALIBER case terminology*, *Provided RCA material*, atau *General industrial definition* (bukan standar internal).
   Kategori HSE sengaja kosong.
 - **Data Sources** (`/data-sources`): katalog 4 sumber baseline (format file lomba dipisah dari domain data), coverage
-  dan field asli, diagram arsitektur, dan sumber *Future / Conceptual* yang *not connected*. Ada juga upload XLSX/CSV
+  dan field asli, serta diagram arsitektur. Ada juga upload XLSX/CSV
   yang hanya membaca metadata di browser lalu berstatus *Pending validation*; data hasil upload tidak pernah masuk analytics.
   Manifest file (nama, ukuran, sheet, jumlah baris/slide) ditulis oleh `npm run data` ke `sourceFiles`.
 
