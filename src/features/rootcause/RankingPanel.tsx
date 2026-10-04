@@ -7,13 +7,14 @@ import { currentUser } from '@/data/plant'
 import type { Hypothesis } from '@/data/rootCause'
 import { analyzeMatrix, buildMatrix, CR_THRESHOLD, DEFAULT_UPPER, fraction, RC_CRITERIA, rcWeight, SAATY_SCALE } from '@/lib/ahpPairwise'
 import { fmtDate } from '@/lib/asOf'
+import { useRole } from '@/lib/role'
 import type { PairwiseState } from '@/lib/usePairwise'
 
 const pct = (v: number) => `${Math.round(v * 100)}%`
-const ROLES = ['Supervisor', 'Reliability Engineer', 'Process Engineer', 'Maintenance Planner']
 
 export function RankingPanel({ h, rank, pairwise }: { h: Hypothesis & { priority: number }; rank: number; pairwise: PairwiseState }) {
   const [open, setOpen] = useState(false)
+  const { can, viewOnly } = useRole()
   const { analysis, judgment } = pairwise
   const consistent = analysis.cr < CR_THRESHOLD
 
@@ -66,7 +67,12 @@ export function RankingPanel({ h, rank, pairwise }: { h: Hypothesis & { priority
             'Weights from the baseline expert judgment'
           )}
         </span>
-        <button onClick={() => setOpen(true)} className="flex items-center gap-1.5 font-medium text-navy-700 hover:underline">
+        <button
+          onClick={() => setOpen(true)}
+          disabled={!can('editPairwise')}
+          title={can('editPairwise') ? undefined : viewOnly}
+          className="flex items-center gap-1.5 font-medium text-navy-700 hover:underline disabled:text-ink-3 disabled:no-underline"
+        >
           <PencilLine className="size-4" /> Fill pairwise matrix
         </button>
       </div>
@@ -80,7 +86,7 @@ export function RankingPanel({ h, rank, pairwise }: { h: Hypothesis & { priority
 function PairwiseEditor({ pairwise, onClose }: { pairwise: PairwiseState; onClose: () => void }) {
   const [draft, setDraft] = useState(() => pairwise.upper.map((r) => [...r]))
   const [filledBy, setFilledBy] = useState(pairwise.judgment?.filledBy ?? currentUser.name)
-  const [role, setRole] = useState(pairwise.judgment?.role ?? ROLES[0])
+  const { role } = useRole()
   const matrix = buildMatrix(draft)
   const a = analyzeMatrix(matrix)
   const consistent = a.cr < CR_THRESHOLD
@@ -173,11 +179,7 @@ function PairwiseEditor({ pairwise, onClose }: { pairwise: PairwiseState; onClos
         </label>
         <label className="text-[13px] text-ink-2">
           Role
-          <select value={role} onChange={(e) => setRole(e.target.value)} className="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 text-[14px] text-ink outline-none focus:ring-2 focus:ring-navy-600/20">
-            {ROLES.map((r) => (
-              <option key={r}>{r}</option>
-            ))}
-          </select>
+          <p className="mt-1 rounded-lg border border-line bg-slate-50 px-3 py-2 text-[14px] text-ink">{role}</p>
         </label>
       </div>
 

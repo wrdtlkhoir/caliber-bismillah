@@ -2,6 +2,7 @@ import { Pencil, Plus, ShieldAlert, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
+import { useRole } from '@/lib/role'
 import { CONSTRAINT_TYPES, constraintLabel, type ConstraintType, type DecisionConstraint } from '@/lib/constraints'
 
 interface Props {
@@ -11,6 +12,8 @@ interface Props {
 
 /** Ringkasan constraint keputusan; ikon pensil membuka editor. */
 export function ConstraintsPanel({ constraints, onEdit }: Props) {
+  const { can, viewOnly } = useRole()
+  const locked = !can('editConstraints')
   return (
     <Card className="p-5">
       <header className="flex items-start justify-between gap-3">
@@ -20,7 +23,13 @@ export function ConstraintsPanel({ constraints, onEdit }: Props) {
           </h2>
           <p className="text-[13px] text-ink-2">Limits the chosen solution has to respect</p>
         </div>
-        <button onClick={onEdit} className="rounded-md p-2 text-navy-700 hover:bg-info-soft" aria-label="Edit constraints" title="Edit constraints">
+        <button
+          onClick={onEdit}
+          disabled={locked}
+          className="rounded-md p-2 text-navy-700 hover:bg-info-soft disabled:text-ink-3 disabled:hover:bg-transparent"
+          aria-label="Edit constraints"
+          title={locked ? viewOnly : 'Edit constraints'}
+        >
           <Pencil className="size-4" />
         </button>
       </header>
@@ -33,6 +42,8 @@ export function ConstraintsPanel({ constraints, onEdit }: Props) {
             </li>
           ))}
         </ul>
+      ) : locked ? (
+        <p className="mt-3 text-[13.5px] text-ink-3">No constraints recorded.</p>
       ) : (
         <button onClick={onEdit} className="mt-3 w-full rounded-lg border border-dashed border-slate-300 px-3 py-4 text-[13.5px] text-ink-2 transition hover:border-navy-700 hover:text-navy-700">
           No constraints yet. Add downtime window, budget, spares or permit limits.

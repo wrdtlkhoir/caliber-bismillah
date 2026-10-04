@@ -28,6 +28,7 @@ import { AddActionModal } from '@/features/actions/AddActionModal'
 import { CapaTable } from '@/features/actions/CapaTable'
 import { VerificationChart } from '@/features/actions/VerificationChart'
 import { useDecision } from '@/lib/useDecision'
+import { useRole } from '@/lib/role'
 import { usePersistentState } from '@/lib/usePersistentState'
 
 type CapaState = 'open' | 'closed' | 'escalated'
@@ -57,13 +58,16 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
   const [escalateOpen, setEscalateOpen] = useState(false)
   const [highlight, setHighlight] = useState<string | null>(null)
   const [toast, showToast] = useToast()
+  const { can, viewOnly } = useRole()
+  const canEdit = can('editCapa')
+  const lockTitle = canEdit ? undefined : viewOnly
 
   // Validasi dari Page 3 (kalau engineer sudah Accept) menggantikan data bawaan
   const acceptedId = Object.keys(decisions).find((k) => decisions[k] === 'accepted')
   const acceptedHyp = acceptedId ? rcCase?.hypotheses.find((h) => h.id === acceptedId) : undefined
   const acceptedLog = [...log].reverse().find((l) => l.text.includes(`accepted ${acceptedId}`))
   const validation = acceptedHyp
-    ? { id: ac.validation.id, rootCause: acceptedHyp.title, by: `${currentUser.name} (${currentUser.role})`, at: `${acceptedLog?.time ?? ''} WIB` }
+    ? { id: ac.validation.id, rootCause: acceptedHyp.title, by: `${currentUser.name} (Reliability Engineer)`, at: `${acceptedLog?.time ?? ''} WIB` }
     : ac.validation
 
   const { actions } = capa
@@ -197,7 +201,12 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
               <h2 className="text-[21px] font-medium text-ink">Action Plan (CAPA)</h2>
               <p className="text-[15px] text-ink-2">Structured execution to eliminate immediate risk and systemic recurrence</p>
             </div>
-            <button onClick={() => setAddOpen(true)} className="flex items-center gap-2 rounded-lg bg-info-soft px-4 py-2 text-[15px] font-medium text-navy-700 hover:brightness-95">
+            <button
+              onClick={() => setAddOpen(true)}
+              disabled={!canEdit}
+              title={lockTitle}
+              className="flex items-center gap-2 rounded-lg bg-info-soft px-4 py-2 text-[15px] font-medium text-navy-700 hover:brightness-95 disabled:opacity-40 disabled:hover:brightness-100"
+            >
               <ListPlus className="size-4" /> Add Action Item
             </button>
           </header>
@@ -215,7 +224,7 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
           </ol>
 
           <div className="mt-4">
-            <CapaTable actions={actions} highlightId={highlight} onStatus={setStatus} refDate={asOf} />
+            <CapaTable actions={actions} highlightId={highlight} onStatus={setStatus} refDate={asOf} readOnly={!canEdit} readOnlyTitle={viewOnly} />
           </div>
 
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
@@ -283,10 +292,20 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
           <div className="mt-auto flex flex-wrap items-center gap-2 pt-5">
             {capa.state === 'open' ? (
               <>
-                <button onClick={() => setCloseOpen(true)} className="flex items-center gap-2 rounded-lg bg-navy-800 px-4 py-2.5 text-[15px] font-medium text-white hover:bg-navy-700">
+                <button
+                  onClick={() => setCloseOpen(true)}
+                  disabled={!canEdit}
+                  title={lockTitle}
+                  className="flex items-center gap-2 rounded-lg bg-navy-800 px-4 py-2.5 text-[15px] font-medium text-white hover:bg-navy-700 disabled:opacity-40 disabled:hover:bg-navy-800"
+                >
                   <BadgeCheck className="size-4" /> Close CAPA
                 </button>
-                <button onClick={() => setEscalateOpen(true)} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[15px] font-medium text-critical hover:bg-critical-soft">
+                <button
+                  onClick={() => setEscalateOpen(true)}
+                  disabled={!canEdit}
+                  title={lockTitle}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[15px] font-medium text-critical hover:bg-critical-soft disabled:opacity-40 disabled:hover:bg-transparent"
+                >
                   <RotateCcw className="size-4" /> Reopen / Escalate
                 </button>
               </>
@@ -296,7 +315,12 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
                   {capa.state === 'closed' ? <BadgeCheck className="size-4" /> : <TriangleAlert className="size-4" />}
                   {capa.state === 'closed' ? 'CAPA closed' : 'Escalated to Plant Manager'}
                 </span>
-                <button onClick={() => setCapa((c) => ({ ...c, state: 'open' }))} className="text-[13.5px] font-medium text-navy-700 hover:underline">
+                <button
+                  onClick={() => setCapa((c) => ({ ...c, state: 'open' }))}
+                  disabled={!canEdit}
+                  title={lockTitle}
+                  className="text-[13.5px] font-medium text-navy-700 hover:underline disabled:text-ink-3 disabled:no-underline"
+                >
                   Reopen
                 </button>
               </div>
@@ -353,7 +377,12 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
                     <Check className="size-4" /> <Mono>{capa.reviews[f.id]}</Mono>
                   </span>
                 ) : (
-                  <button onClick={() => createReview(f.id)} className="rounded-md bg-white px-3 py-1.5 text-[13.5px] font-medium text-navy-900 shadow-card hover:bg-slate-100">
+                  <button
+                    onClick={() => createReview(f.id)}
+                    disabled={!canEdit}
+                    title={lockTitle}
+                    className="rounded-md bg-white px-3 py-1.5 text-[13.5px] font-medium text-navy-900 shadow-card hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white"
+                  >
                     Create Pro-active Review
                   </button>
                 )}

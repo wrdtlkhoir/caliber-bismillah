@@ -1,6 +1,6 @@
 import clsx from 'clsx'
-import { ArrowRight, BrainCircuit, Check, ChevronRight, Download, Radio, RefreshCw } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { ArrowRight, BrainCircuit, Check, ChevronRight, Download, RefreshCw } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Card, Mono } from '@/components/ui/Card'
 import { Drawer } from '@/components/ui/Drawer'
@@ -11,7 +11,8 @@ import { buildProblem, buildProblems, plantLabel, urgentActionsAt } from '@/data
 import { rankProblems } from '@/lib/ahp'
 import { fmtDate, useAsOf } from '@/lib/asOf'
 import { exportDossier } from '@/lib/dossier'
-import { AskCaliber } from '@/features/overview/AskCaliber'
+import { useRole } from '@/lib/role'
+import { AskCaliberChat } from '@/features/investigation/AskCaliberChat'
 import { AssetSummary } from '@/features/investigation/AssetSummary'
 import { PiReplay } from '@/features/investigation/PiReplay'
 import { RelevantParameters } from '@/features/investigation/RelevantParameters'
@@ -31,11 +32,10 @@ export default function Investigation() {
 
 function InvestigationView({ asset, asOf }: { asset: Asset; asOf: string }) {
   const navigate = useNavigate()
-  const [live, setLive] = useState(false)
   const [askOpen, setAskOpen] = useState(false)
   const [requested, setRequested] = useState(false)
   const [toast, showToast] = useToast()
-  const stopLive = useCallback(() => setLive(false), [])
+  const { can, viewOnly } = useRole()
 
   const inv = useMemo(() => buildInvestigation(asset, asOf), [asset, asOf])
   const ranked = useMemo(() => rankProblems(buildProblems(asOf)), [asOf])
@@ -66,23 +66,12 @@ function InvestigationView({ asset, asOf }: { asset: Asset; asOf: string }) {
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <HeaderButton icon={Download} onClick={() => exportDossier(problem, inv, asOf)}>
+          <HeaderButton icon={Download} onClick={() => exportDossier(problem, inv, asOf, rank ? { rank, total: ranked.length } : undefined)}>
             Export Dossier
           </HeaderButton>
           <HeaderButton icon={BrainCircuit} onClick={() => setAskOpen(true)} variant="teal">
             Ask CALIBER
           </HeaderButton>
-          {asset.production && (
-            <HeaderButton icon={Radio} onClick={() => setLive((v) => !v)} aria-pressed={live} variant="primary" className={clsx(live && 'bg-navy-950 ring-2 ring-teal')}>
-              {live ? (
-                <span className="flex items-center gap-2">
-                  <span className="size-2 animate-pulse rounded-full bg-good" /> Replaying PI
-                </span>
-              ) : (
-                'Live Telemetry'
-              )}
-            </HeaderButton>
-          )}
         </div>
       </div>
 
@@ -91,7 +80,7 @@ function InvestigationView({ asset, asOf }: { asset: Asset; asOf: string }) {
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
         <div className="min-w-0 space-y-5">
           <RelevantParameters inv={inv} />
-          <PiReplay asset={asset} asOf={asOf} live={live} onFinished={stopLive} />
+          <PiReplay asset={asset} asOf={asOf} />
         </div>
         <div className="space-y-5">
           <BenchmarkPanel inv={inv} value={inv.benchmark.value} digits={inv.params.find((p) => p.key === inv.benchmark.paramKey)?.digits ?? 1} />
@@ -113,8 +102,12 @@ function InvestigationView({ asset, asOf }: { asset: Asset; asOf: string }) {
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={requestField}
-            disabled={requested}
-            className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-[15px] font-medium text-navy-900 transition hover:bg-slate-100 disabled:text-good disabled:hover:bg-transparent"
+            disabled={requested || !can('requestField')}
+            title={can('requestField') ? undefined : viewOnly}
+            className={clsx(
+              'flex items-center gap-2 rounded-lg px-4 py-2.5 text-[15px] font-medium text-navy-900 transition hover:bg-slate-100 disabled:hover:bg-transparent',
+              requested ? 'disabled:text-good' : 'disabled:text-ink-3',
+            )}
           >
             {requested && <Check className="size-4" />}
             {requested ? 'Field request sent' : inv.fieldAction}
@@ -130,23 +123,14 @@ function InvestigationView({ asset, asOf }: { asset: Asset; asOf: string }) {
       </Card>
 
       <Drawer open={askOpen} onClose={() => setAskOpen(false)} title="Ask CALIBER">
-        <AskCaliber problem={problem} rank={rank || 1} total={Math.max(ranked.length, 1)} action={urgentActionsAt(asOf).all.find((a) => a.problemId === asset.tag)} />
-        <div className="mt-5 rounded-lg border border-line p-4 text-[14px] text-ink">
-          <p className="text-[12px] font-medium uppercase tracking-wide text-ink-2">Leading hypothesis</p>
-          <p className="mt-1 font-medium">{inv.impact[1].headline}</p>
-          <p className="text-ink-2">{inv.impact[1].detail}</p>
-          {inv.incidents[0] && (
-            <>
-              <p className="mt-3 text-[12px] font-medium uppercase tracking-wide text-ink-2">Closest precedent</p>
-              <p className="mt-1">
-                <Mono className="font-semibold text-navy-700">{inv.incidents[0].incident.ar ?? inv.incidents[0].incident.mto}</Mono>, {Math.round(inv.incidents[0].score * 100)}% match
-              </p>
-              <p className="text-ink-2">
-                {inv.incidents[0].incident.title} ({inv.incidents[0].incident.plant}, {inv.incidents[0].incident.status})
-              </p>
-            </>
-          )}
-        </div>
+        <AskCaliberChat
+          problem={problem}
+          rank={rank || 1}
+          total={Math.max(ranked.length, 1)}
+          inv={inv}
+          asOf={asOf}
+          action={urgentActionsAt(asOf).all.find((a) => a.problemId === asset.tag)}
+        />
       </Drawer>
 
       {toast}

@@ -6,6 +6,7 @@ import type { Hypothesis } from '@/data/rootCause'
 import { fmtDate } from '@/lib/asOf'
 import type { DecisionConstraint } from '@/lib/constraints'
 import { solutionImpacts } from '@/lib/solutionImpact'
+import { useRole } from '@/lib/role'
 
 const KIND: Record<string, { label: string; cls: string }> = {
   corrective: { label: 'Corrective', cls: 'bg-info-soft text-navy-700' },
@@ -22,6 +23,7 @@ interface Props {
 
 export function SolutionImpact({ asset, hypothesis, constraints, onEditConstraints }: Props) {
   const items = solutionImpacts(asset, hypothesis.rcIds, constraints)
+  const { can, viewOnly } = useRole()
   const totals = items.reduce((t, i) => ({ good: t.good + i.good.length, bad: t.bad + i.bad.length, conflicts: t.conflicts + i.conflicts.length }), { good: 0, bad: 0, conflicts: 0 })
 
   return (
@@ -35,7 +37,12 @@ export function SolutionImpact({ asset, hypothesis, constraints, onEditConstrain
             Good and bad effects of each fix for {hypothesis.id}, checked against {constraints.length} constraint{constraints.length === 1 ? '' : 's'}
           </p>
         </div>
-        <button onClick={onEditConstraints} className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-[13.5px] font-medium text-navy-800 hover:bg-slate-200">
+        <button
+          onClick={onEditConstraints}
+          disabled={!can('editConstraints')}
+          title={can('editConstraints') ? undefined : viewOnly}
+          className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-[13.5px] font-medium text-navy-800 hover:bg-slate-200 disabled:opacity-40 disabled:hover:bg-slate-100"
+        >
           <Pencil className="size-3.5" /> Constraints
         </button>
       </header>
