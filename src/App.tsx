@@ -1,6 +1,7 @@
 import { createBrowserRouter, RouterProvider, type Params } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { AsOfProvider } from '@/lib/asOf'
+import { RoleProvider } from '@/lib/role'
 import { NAV } from '@/components/layout/Sidebar'
 import { assetByTag } from '@/data/dataset'
 import Actions from '@/pages/Actions'
@@ -50,7 +51,9 @@ const router = createBrowserRouter([
 export default function App() {
   return (
     <AsOfProvider>
-      <RouterProvider router={router} />
+      <RoleProvider>
+        <RouterProvider router={router} />
+      </RoleProvider>
     </AsOfProvider>
   )
 }

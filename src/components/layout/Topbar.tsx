@@ -6,9 +6,11 @@ import type { RouteHandle } from '@/App'
 import { assets } from '@/data/dataset'
 import { currentUser } from '@/data/plant'
 import { fmtDate, useAsOf } from '@/lib/asOf'
+import { useRole } from '@/lib/role'
 
 export function Topbar({ onMenu }: { onMenu: () => void }) {
   const { asOf } = useAsOf()
+  const { role } = useRole()
   const { pathname } = useLocation()
   const [params, setParams] = useSearchParams()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -108,7 +110,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
       <div className="flex shrink-0 items-center gap-3">
         <div className="hidden text-right leading-tight sm:block">
           <p className="text-[15px] font-medium text-ink">{currentUser.name}</p>
-          <p className="text-xs text-ink-3">{currentUser.role}</p>
+          <p className="text-xs text-ink-3">{role}</p>
         </div>
         <span className="grid size-10 place-items-center rounded-full bg-navy-900 text-white">
           <User className="size-5" />

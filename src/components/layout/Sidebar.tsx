@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import { BookOpen, ChartSpline, ChevronsUpDown, Database, GitFork, SearchCheck, ShieldCheck, UserCog } from 'lucide-react'
-import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
+import { ROLES, useRole, type Role } from '@/lib/role'
 
 export const NAV = [
   { to: '/', label: 'Plant Intelligence', icon: ChartSpline },
@@ -12,10 +12,8 @@ export const NAV = [
   { to: '/data-sources', label: 'Data Sources', icon: Database },
 ]
 
-const ROLES = ['Reliability Engineer', 'Operations Manager', 'Maintenance Planner', 'Plant Director']
-
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
-  const [role, setRole] = useState(ROLES[0])
+  const { role, setRole } = useRole()
 
   return (
     <aside className="flex h-full w-[248px] flex-col bg-navy-800 text-white">
@@ -47,7 +45,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <UserCog className="size-4 text-teal" />
           <select
             value={role}
-            onChange={(e) => setRole(e.target.value)}
+            onChange={(e) => setRole(e.target.value as Role)}
             className="w-full appearance-none bg-transparent pr-5 outline-none [&>option]:text-ink"
             aria-label="Operational role"
           >
