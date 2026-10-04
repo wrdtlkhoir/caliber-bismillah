@@ -140,7 +140,7 @@ function InvestigationView({ asset, asOf }: { asset: Asset; asOf: string }) {
 
 const VARIANT = {
   default: 'border-line bg-surface text-ink',
-  teal: 'border-teal/20 bg-teal-soft text-navy-900 [&_svg]:text-teal',
+  teal: 'border-line bg-surface text-navy-800 [&_svg]:text-navy-700',
   primary: 'border-navy-800 bg-navy-800 text-white hover:bg-navy-700',
 }
 

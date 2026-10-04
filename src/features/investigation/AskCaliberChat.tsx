@@ -127,7 +127,7 @@ export function AskCaliberChat(ctx: Ctx) {
       <div className="mt-4 flex-1 space-y-4" aria-live="polite">
         {messages.length === 0 && (
           <div>
-            <p className="text-[12px] font-medium uppercase tracking-wide text-ink-2">Suggested questions</p>
+            <p className="text-[13px] font-medium text-ink-2">Suggested questions</p>
             <ul className="mt-2 space-y-1">
               {PROMPTS.map((p) => (
                 <li key={p.intent}>

@@ -9,7 +9,7 @@ export const confidenceLabel = (c: number) => (c >= 80 ? 'High' : c >= 50 ? 'Med
 const STATUS_ROW: Record<EvidenceStatus, { icon: typeof CircleCheck; cls: string; iconCls: string }> = {
   support: { icon: CircleCheck, cls: 'border-line bg-surface text-ink', iconCls: 'text-good' },
   missing: { icon: Info, cls: 'border-line bg-slate-50 text-ink-2', iconCls: 'text-ink-3' },
-  contradict: { icon: CircleAlert, cls: 'border-critical/20 bg-critical-soft text-critical', iconCls: 'text-critical' },
+  contradict: { icon: CircleAlert, cls: 'border-line bg-slate-50 text-ink', iconCls: 'text-critical' },
 }
 
 const PARAM_TEXT = {

@@ -131,7 +131,7 @@ export function UploadModal({ open, onClose, onSubmit }: { open: boolean; onClos
           {/* 2. preview metadata */}
           {meta && (
             <section className="mt-5">
-              <h3 className="text-[12px] font-medium uppercase tracking-wide text-ink-2">File metadata</h3>
+              <h3 className="text-[13px] font-medium text-ink-2">File metadata</h3>
               <dl className="mt-2 grid grid-cols-3 gap-3 text-[13.5px]">
                 <div>
                   <dt className="text-ink-2">Type</dt>
@@ -171,7 +171,7 @@ export function UploadModal({ open, onClose, onSubmit }: { open: boolean; onClos
           {/* 3. klasifikasi */}
           {meta && (
             <section className="mt-5">
-              <h3 className="text-[12px] font-medium uppercase tracking-wide text-ink-2">Classify dataset</h3>
+              <h3 className="text-[13px] font-medium text-ink-2">Classify dataset</h3>
               <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {UPLOAD_DOMAINS.map((d) => {
                   const allowed = uploadDomains.includes(d)

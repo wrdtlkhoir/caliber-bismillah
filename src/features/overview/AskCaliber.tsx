@@ -1,4 +1,4 @@
-import { Sparkles, X } from 'lucide-react'
+import { MessageSquareText, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Mono } from '@/components/ui/Card'
 import type { UrgentAction } from '@/data/types'
@@ -54,9 +54,9 @@ export function AskCaliber({ problem, rank, total, action }: Props) {
   }
 
   return (
-    <section className="rounded-xl border border-teal/15 border-l-4 border-l-teal bg-gradient-to-r from-teal-soft to-teal-soft/40 px-4 py-3">
+    <section className="rounded-xl border border-line bg-surface px-4 py-3">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <Sparkles className="size-5 shrink-0 text-teal" />
+        <MessageSquareText className="size-5 shrink-0 text-navy-700" strokeWidth={1.75} />
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-baseline gap-x-3 text-[15px] font-medium text-ink">
             Ask CALIBER Intelligence
@@ -76,7 +76,7 @@ export function AskCaliber({ problem, rank, total, action }: Props) {
               onClick={() => ask(item)}
               className={
                 'rounded-md border px-2.5 py-1 text-[13px] transition disabled:opacity-40 ' +
-                (q === item ? 'border-teal bg-teal text-white' : 'border-line bg-white text-ink hover:border-teal')
+                (q === item ? 'border-navy-800 bg-navy-800 text-white' : 'border-line bg-white text-ink hover:border-slate-300')
               }
             >
               {item}

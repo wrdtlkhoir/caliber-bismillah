@@ -108,7 +108,7 @@ export default function KnowledgeBase() {
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <section className="border-t border-line py-3">
-      <h3 className="text-[12px] font-medium uppercase tracking-wide text-ink-2">{label}</h3>
+      <h3 className="text-[13px] font-medium text-ink-2">{label}</h3>
       <div className="mt-1 text-[14px] leading-relaxed text-ink">{children}</div>
     </section>
   )

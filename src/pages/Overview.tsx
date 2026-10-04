@@ -34,6 +34,7 @@ export default function Overview() {
   const [sort, setSort] = useState<SortKey>('ahp')
   const [selectedUnit, setSelectedUnit] = useState<string | null>(null)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
+  const [focus, setFocus] = useState<{ id: string; seq: number }>()
 
   const ranked = useMemo(() => rankProblems(buildProblems(asOf)), [asOf])
   const [pickedId, setSelectedId] = useState<string | null>(null)
@@ -66,6 +67,7 @@ export default function Overview() {
   /** Pilih masalah dari panel lain (ranking/actions): pastikan kartunya terlihat lalu scroll. */
   const focusProblem = (id: string) => {
     setSelectedId(id)
+    setFocus((f) => ({ id, seq: (f?.seq ?? 0) + 1 }))
     const p = ranked.find((r) => r.id === id)
     if (p && filter !== 'all' && p.severity !== filter) setFilter('all')
     if (p && selectedUnit && p.unitId !== selectedUnit) setSelectedUnit(null)
@@ -74,9 +76,8 @@ export default function Overview() {
       next.delete('q')
       setParams(next, { replace: true })
     }
-    requestAnimationFrame(() =>
-      document.getElementById(`problem-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
-    )
+    // tunggu Problem Tank pindah ke halaman yang berisi problem ini
+    setTimeout(() => document.getElementById(`problem-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
   }
 
   const clearFilters = () => {
@@ -98,7 +99,7 @@ export default function Overview() {
           <p className="text-[15px] text-ink-2">What needs attention right now? Operational health &amp; risk hierarchy from the competition dataset</p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-          <span className="flex items-center gap-2 rounded-md bg-good-soft/60 px-2.5 py-1 font-mono text-[12.5px] text-navy-900">
+          <span className="flex items-center gap-2 rounded-md bg-slate-100 px-2.5 py-1 font-mono text-[12.5px] text-ink-2">
             <span className="size-1.5 rounded-full bg-good" />
             Data as of {fmtDate(asOf)}, {PLANT_SCOPE}
           </span>
@@ -124,6 +125,7 @@ export default function Overview() {
           onSelect={setSelectedId}
           onHover={setHoveredId}
           onClearFilters={clearFilters}
+          focus={focus}
           emptyHint={q ? `No problems match “${q}”${unitName ? ` in ${unitName}` : ''}.` : undefined}
           assistant={
             <AskCaliber

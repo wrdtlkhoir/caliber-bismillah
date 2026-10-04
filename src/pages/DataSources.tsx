@@ -199,7 +199,7 @@ export default function DataSources() {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="py-2.5">
-      <dt className="text-[12px] font-medium uppercase tracking-wide text-ink-2">{label}</dt>
+      <dt className="text-[13px] font-medium text-ink-2">{label}</dt>
       <dd className="mt-0.5 text-[14px] leading-relaxed text-ink">{children}</dd>
     </div>
   )
@@ -292,7 +292,7 @@ function Architecture() {
         </div>
 
         <div className="rounded-lg border border-dashed border-slate-300 p-3">
-          <p className="flex items-center justify-between gap-2 text-[12px] font-medium uppercase tracking-wide text-ink-2">
+          <p className="flex items-center justify-between gap-2 text-[13px] font-medium text-ink-2">
             Future layer <StatusLabel dashed>Not connected</StatusLabel>
           </p>
           <ul className="mt-2 space-y-1.5">

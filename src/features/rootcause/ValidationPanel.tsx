@@ -38,7 +38,7 @@ export function ValidationPanel({ h, decision, acceptedId, placeholder, onAction
   const otherAccepted = acceptedId && acceptedId !== h.id
 
   return (
-    <Card className="overflow-hidden border-t-4 border-t-navy-900 p-5">
+    <Card className="p-5">
       <header className="flex items-start gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-navy-900">
           <UserCheck className="size-5" />

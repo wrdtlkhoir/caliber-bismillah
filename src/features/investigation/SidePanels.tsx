@@ -89,7 +89,7 @@ export function ImpactPanel({ steps }: { steps: ImpactStep[] }) {
                 <Icon className="size-3.5" />
               </span>
               <div className="min-w-0">
-                <p className="text-[11.5px] font-medium uppercase tracking-wide text-ink-2">
+                <p className="text-[12.5px] font-medium text-ink-2">
                   Step {i + 1}: {s.title}
                 </p>
                 <p className={clsx('text-[15px] font-medium leading-snug', m.head)}>{s.headline}</p>
@@ -111,7 +111,7 @@ export function ConfidencePanel({ c }: { c: Investigation['confidence'] }) {
   return (
     <Card className="p-5">
       <header className="flex items-center justify-between">
-        <h2 className="text-[12.5px] font-medium uppercase tracking-wide text-ink-2">Data Confidence Score</h2>
+        <h2 className="text-[12.5px] font-medium text-ink-2">Data Confidence Score</h2>
         <Mono className="rounded bg-info-soft px-2 py-0.5 text-[12.5px] font-semibold text-navy-700">
           {level} ({c.pct}%)
         </Mono>

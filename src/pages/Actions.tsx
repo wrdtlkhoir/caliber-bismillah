@@ -9,7 +9,7 @@ import {
   ListPlus,
   RotateCcw,
   ShieldCheck,
-  Sparkles,
+  Network,
   TriangleAlert,
 } from 'lucide-react'
 import { Fragment, useMemo, useState } from 'react'
@@ -150,7 +150,7 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
                   className={clsx(
                     'grid size-7 place-items-center rounded-full',
                     i < currentStage && 'bg-navy-800 text-white',
-                    i === currentStage && 'border-[3px] border-info bg-white ring-4 ring-info-soft',
+                    i === currentStage && 'border-2 border-navy-700 bg-white',
                     i > currentStage && 'border-2 border-slate-300 bg-white',
                   )}
                 >
@@ -176,7 +176,7 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
           <ShieldCheck className="size-6 text-teal" />
         </span>
         <div className="min-w-0 flex-1 basis-80">
-          <p className="text-[12.5px] font-medium uppercase tracking-wide text-white/70">Authoritative human validation</p>
+          <p className="text-[12.5px] font-medium text-white/70">Authoritative human validation</p>
           <p className="text-[18px] font-medium">Validated root cause: {validation.rootCause}</p>
         </div>
         <Mono className="rounded-md bg-white/10 px-3 py-1.5 text-[13px]">{validation.id}</Mono>
@@ -229,7 +229,7 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
 
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
             <div>
-              <h3 className="text-[13px] font-medium uppercase tracking-wide text-ink-2">PM schedule established</h3>
+              <h3 className="text-[13px] font-medium text-ink-2">PM schedule established</h3>
               <ul className="mt-2 space-y-1.5">
                 {ac.rca.pmSchedule.map((pm) => (
                   <li key={pm.no} className="flex items-start gap-3 rounded-lg bg-slate-50 px-3 py-2 text-[13.5px]">
@@ -243,7 +243,7 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
               </ul>
             </div>
             <div>
-              <h3 className="text-[13px] font-medium uppercase tracking-wide text-ink-2">Risk analysis of corrective action</h3>
+              <h3 className="text-[13px] font-medium text-ink-2">Risk analysis of corrective action</h3>
               <ul className="mt-2 space-y-1.5">
                 {ac.rca.risks.map((r) => (
                   <li key={r.action} className="rounded-lg bg-slate-50 px-3 py-2 text-[13.5px]">
@@ -279,7 +279,7 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
 
           <ul className="mt-4 space-y-2">
             {ac.verification.checks.map((c) => (
-              <li key={c.title} className={clsx('flex gap-3 rounded-lg px-3 py-3', c.state === 'done' ? 'bg-good-soft/60' : 'bg-slate-100')}>
+              <li key={c.title} className={clsx('flex gap-3 rounded-lg px-3 py-3', c.state === 'done' ? 'bg-slate-50' : 'bg-slate-100/70')}>
                 {c.state === 'done' ? <CircleCheck className="mt-0.5 size-5 shrink-0 text-good" /> : <Clock className="mt-0.5 size-5 shrink-0 text-ink-2" />}
                 <div>
                   <p className="text-[15px] font-medium text-ink">{c.title}</p>
@@ -332,7 +332,7 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
       <div className="grid gap-5 lg:grid-cols-2">
         {/* Systemic warning */}
         {systemic && ac.systemicText && (
-          <Card className={clsx('flex flex-col border-l-4 p-5', systemic.status === 'Done' ? 'border-l-good' : 'border-l-navy-900')}>
+          <Card className="flex flex-col p-5">
             <h2 className="flex items-center gap-3 text-[18px] font-medium text-ink">
               {systemic.status === 'Done' ? <CircleCheck className="size-6 text-good" /> : <Info className="size-6 text-ink-2" />}
               {systemic.status === 'Done' ? 'Symptom and system cause addressed' : 'Symptom fixed, system cause still open'}
@@ -353,8 +353,8 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
         <Card className={clsx('p-5', !systemic && 'lg:col-span-2')}>
           <header className="flex items-start justify-between gap-3">
             <h2 className="flex items-start gap-3 text-[18px] font-medium text-ink">
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-teal-soft text-teal">
-                <Sparkles className="size-5" />
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-navy-700">
+                <Network className="size-5" />
               </span>
               Cross-equipment learning: fleet vulnerability
             </h2>
@@ -456,9 +456,9 @@ function Kpi({ label, value, badge, badgeTone, foot }: { label: string; value: R
   const tone = { good: 'bg-good-soft text-good', info: 'bg-info-soft text-navy-700', high: 'bg-high-soft text-high' }[badgeTone]
   return (
     <Card className="p-5">
-      <p className="text-[12.5px] font-medium uppercase tracking-wide text-ink-2">{label}</p>
+      <p className="text-[12.5px] font-medium text-ink-2">{label}</p>
       <div className="mt-3 flex items-center justify-between gap-3">
-        <span className="font-mono text-[34px] font-bold leading-none text-navy-800">{value}</span>
+        <span className="text-[32px] font-semibold leading-none tracking-[-0.02em] text-navy-800 tabular">{value}</span>
         <span className={clsx('rounded px-2 py-1 text-[13px] font-medium', tone)}>{badge}</span>
       </div>
       <p className="mt-3 text-[13.5px] text-ink-2">{foot}</p>

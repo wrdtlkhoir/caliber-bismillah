@@ -60,7 +60,7 @@ export function SolutionImpact({ asset, hypothesis, constraints, onEditConstrain
 
           <ul className="mt-4 space-y-3">
             {items.map(({ action: x, good, bad, conflicts, notes }) => (
-              <li key={x.text} className={clsx('rounded-xl border p-4', conflicts.length ? 'border-high/40' : 'border-line')}>
+              <li key={x.text} className="rounded-xl border border-line p-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <p className="text-[15px] font-medium leading-snug text-ink">{x.text}</p>
                   <span className={clsx('shrink-0 rounded px-2 py-0.5 text-[12.5px]', KIND[x.kind].cls)}>{KIND[x.kind].label}</span>
@@ -71,8 +71,8 @@ export function SolutionImpact({ asset, hypothesis, constraints, onEditConstrain
                 </p>
 
                 <div className="mt-3 grid gap-3 md:grid-cols-2">
-                  <div className="rounded-lg bg-good-soft/50 p-3">
-                    <p className="flex items-center gap-1.5 text-[12.5px] font-medium uppercase tracking-wide text-good">
+                  <div className="rounded-lg border border-line bg-slate-50/70 p-3">
+                    <p className="flex items-center gap-1.5 text-[12.5px] font-medium text-good">
                       <ThumbsUp className="size-3.5" /> Good impact
                     </p>
                     <ul className="mt-1.5 space-y-1.5 text-[13.5px] leading-snug text-ink">
@@ -81,8 +81,8 @@ export function SolutionImpact({ asset, hypothesis, constraints, onEditConstrain
                       ))}
                     </ul>
                   </div>
-                  <div className="rounded-lg bg-critical-soft/50 p-3">
-                    <p className="flex items-center gap-1.5 text-[12.5px] font-medium uppercase tracking-wide text-critical">
+                  <div className="rounded-lg border border-line bg-slate-50/70 p-3">
+                    <p className="flex items-center gap-1.5 text-[12.5px] font-medium text-critical">
                       <ThumbsDown className="size-3.5" /> Bad impact
                     </p>
                     <ul className="mt-1.5 space-y-1.5 text-[13.5px] leading-snug text-ink">

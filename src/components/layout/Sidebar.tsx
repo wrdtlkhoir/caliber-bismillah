@@ -40,7 +40,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="m-3 rounded-lg bg-navy-950/70 p-3">
-        <p className="text-[11px] font-medium uppercase tracking-wider text-white/60">Operational Role</p>
+        <p className="text-[12.5px] font-medium text-white/60">Operational Role</p>
         <label className="relative mt-2 flex items-center gap-2 rounded-md bg-navy-800 px-2.5 py-2 text-sm font-medium focus-within:ring-2 focus-within:ring-teal">
           <UserCog className="size-4 text-teal" />
           <select

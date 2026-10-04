@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { BadgeCheck, CircleUserRound, Clock, Download, MapPin, Sparkles, Waypoints, Wrench } from 'lucide-react'
+import { BadgeCheck, CircleUserRound, Clock, Download, ListOrdered, MapPin, Waypoints, Wrench } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { Card, Mono } from '@/components/ui/Card'
@@ -152,20 +152,20 @@ function RootCauseView({ problem, rc }: { problem: Problem; rc: RootCauseCase })
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_440px] 2xl:grid-cols-[minmax(0,1fr)_520px]">
         <div className="space-y-5">
-          <section className="rounded-xl border border-line border-l-4 border-l-teal bg-teal-soft/30 p-5 shadow-card" aria-labelledby="hyp-title">
+          <section className="rounded-xl border border-line bg-surface p-5 shadow-card" aria-labelledby="hyp-title">
             <header className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <span className="grid size-10 place-items-center rounded-lg bg-teal-soft text-teal">
-                  <Sparkles className="size-5" />
+                <span className="grid size-10 place-items-center rounded-lg bg-slate-100 text-navy-700">
+                  <ListOrdered className="size-5" />
                 </span>
                 <div>
-                  <p className="text-[13.5px] text-teal">AI hypotheses, pending engineer validation</p>
+                  <p className="text-[13.5px] text-ink-2">AI hypotheses, pending engineer validation</p>
                   <h2 id="hyp-title" className="text-[20px] font-medium text-navy-900">
                     Triangulated Root Causes
                   </h2>
                 </div>
               </div>
-              <span className="rounded-full bg-surface px-3 py-1 text-[14px] font-medium text-navy-700 shadow-card">{ranked.length} Ranked Candidates</span>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-[13.5px] font-medium text-ink-2">{ranked.length} Ranked Candidates</span>
             </header>
             <div className="mt-4 space-y-4">
               {ranked.map((h, i) => (

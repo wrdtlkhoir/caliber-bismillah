@@ -24,7 +24,7 @@ export function UrgentActions({ actions, total, onSelect }: { actions: UrgentAct
             <li key={a.problemId + a.task}>
               <button
                 onClick={() => onSelect(a.problemId)}
-                className={clsx('w-full rounded-lg border border-l-[3px] border-line px-3 py-2.5 text-left transition hover:shadow-card', s.card, s.border)}
+                className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-left transition hover:border-slate-300 hover:bg-slate-50/60"
               >
                 <div className="flex items-start justify-between gap-2 text-[13px]">
                   <Mono className="shrink-0 font-medium text-ink">{a.problemId}</Mono>

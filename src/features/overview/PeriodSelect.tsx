@@ -108,7 +108,7 @@ export function PeriodSelect({ period, onPeriod }: Props) {
           <div className="mt-2 max-h-[360px] overflow-y-auto">
             {presets.length > 0 && (
               <>
-                <p className="px-2.5 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-3">Period, ending {fmtDate(asOf)}</p>
+                <p className="px-2.5 pb-1 pt-1.5 text-[12.5px] font-medium text-ink-3">Period, ending {fmtDate(asOf)}</p>
                 {presets.map((p) => (
                   <button key={p.key} onClick={() => pick(p)} className={option(period.key === p.key)}>
                     {p.label}
@@ -170,7 +170,7 @@ export function PeriodSelect({ period, onPeriod }: Props) {
 
             {replayHits.length > 0 && (
               <>
-                <p className="mt-1 border-t border-line px-2.5 pb-1 pt-2.5 text-[11px] font-medium uppercase tracking-wide text-ink-3">Replay date</p>
+                <p className="mt-1 border-t border-line px-2.5 pb-1 pt-2.5 text-[12.5px] font-medium text-ink-3">Replay date</p>
                 {replayHits.map((r) => (
                   <button
                     key={r.key}

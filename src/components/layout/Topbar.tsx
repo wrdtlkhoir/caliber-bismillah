@@ -92,9 +92,9 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
       <Link
         to="/"
         title="Dataset replay date. Change it on Plant Intelligence."
-        className="hidden shrink-0 items-center gap-2 rounded-full bg-good-soft px-3 py-1.5 font-mono text-[12.5px] text-good transition hover:brightness-95 sm:flex"
+        className="hidden shrink-0 items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 font-mono text-[12.5px] text-ink-2 transition hover:border-slate-300 sm:flex"
       >
-        <span className="size-2 animate-pulse-dot rounded-full bg-good" />
+        <span className="size-1.5 rounded-full bg-good" />
         As of {fmtDate(asOf)}
       </Link>
 

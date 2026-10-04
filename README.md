@@ -79,7 +79,7 @@ jawabannya disusun dari data secara rule-based supaya demo tetap offline.
 | UI framework | **React 18 + TypeScript** | Berbasis komponen, type-safe |
 | Styling | **Tailwind CSS v4** | Design token dari Figma di `@theme` (`src/index.css`) |
 | Routing | **React Router 6** | Multi-halaman sesuai sidebar; breadcrumb dari `handle` route |
-| Icons / Font | **lucide-react**, **Inter** + **JetBrains Mono** (`@fontsource`) | Sesuai desain, di-bundle lokal |
+| Icons / Font | **lucide-react**, **IBM Plex Sans** + **IBM Plex Mono** (`@fontsource`) | Font industri/enterprise yang tidak generik, di-bundle lokal |
 | Chart | Komponen SVG custom | Ringan, sama persis dengan desain, ada hover tooltip |
 | ETL | **SheetJS** (Excel) + **JSZip** (PowerPoint) | Membaca dataset lomba langsung, tanpa konversi manual |
 

@@ -7,7 +7,7 @@ import { fmtDate } from '@/lib/asOf'
 /** Metrik lingkungan yang hanya bisa diisi dari sistem HSE/Energy di masa depan. Tanpa angka. */
 const FUTURE_METRICS = ['Emissions', 'Waste', 'Water', 'Environmental incidents', 'Energy intensity']
 
-const Label = ({ children }: { children: string }) => <h3 className="text-[11px] font-medium uppercase tracking-wide text-ink-2">{children}</h3>
+const Label = ({ children }: { children: string }) => <h3 className="text-[12.5px] font-medium text-ink-2">{children}</h3>
 
 /**
  * HSE & Safety. Baseline lomba tidak berisi data HSE, jadi bagian ini menyatakan

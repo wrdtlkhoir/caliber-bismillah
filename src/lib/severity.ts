@@ -1,10 +1,10 @@
 import type { ActionStatus, ProblemStatus, Severity, SignalTone } from '@/data/types'
 import { CRITICAL_RISK_THRESHOLD } from '@/lib/ahp'
 
-export const severityMeta: Record<Severity, { label: string; text: string; soft: string; bar: string; border: string }> = {
-  critical: { label: 'Critical', text: 'text-critical', soft: 'bg-critical-soft', bar: 'bg-critical', border: 'border-l-critical' },
-  high: { label: 'High', text: 'text-high', soft: 'bg-high-soft', bar: 'bg-high', border: 'border-l-high' },
-  medium: { label: 'Medium', text: 'text-ink-2', soft: 'bg-slate-100', bar: 'bg-navy-700', border: 'border-l-medium' },
+export const severityMeta: Record<Severity, { label: string; text: string; soft: string; bar: string }> = {
+  critical: { label: 'Critical', text: 'text-critical', soft: 'bg-critical-soft', bar: 'bg-critical' },
+  high: { label: 'High', text: 'text-high', soft: 'bg-high-soft', bar: 'bg-high' },
+  medium: { label: 'Medium', text: 'text-ink-2', soft: 'bg-slate-100', bar: 'bg-navy-700' },
 }
 
 /** Warna bar ranking AHP berdasarkan skor (bukan severity), sesuai desain. */
@@ -30,9 +30,9 @@ export const statusDot: Record<ProblemStatus, { dot: string; text: string }> = {
   Monitoring: { dot: 'bg-good', text: 'text-ink-2' },
 }
 
-export const actionStatusStyle: Record<ActionStatus, { pill: string; card: string; border: string }> = {
-  'At Risk': { pill: 'bg-critical-soft text-critical', card: 'bg-critical-soft/50', border: 'border-l-critical' },
-  Scheduled: { pill: 'bg-info-soft text-navy-800', card: 'bg-white', border: 'border-l-navy-800' },
-  'In Progress': { pill: 'bg-teal-soft text-teal', card: 'bg-white', border: 'border-l-teal' },
-  'On Track': { pill: 'text-good', card: 'bg-white', border: 'border-l-slate-300' },
+export const actionStatusStyle: Record<ActionStatus, { pill: string }> = {
+  'At Risk': { pill: 'bg-critical-soft text-critical' },
+  Scheduled: { pill: 'bg-info-soft text-navy-800' },
+  'In Progress': { pill: 'bg-teal-soft text-teal' },
+  'On Track': { pill: 'text-good' },
 }

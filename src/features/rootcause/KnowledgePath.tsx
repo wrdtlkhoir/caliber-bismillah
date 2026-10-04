@@ -6,10 +6,10 @@ import { Modal } from '@/components/ui/Modal'
 import type { PathNode } from '@/data/rootCause'
 
 const TONE: Record<PathNode['tone'], { box: string; kind: string; title: string; dot: string }> = {
-  default: { box: 'bg-slate-50 border-transparent', kind: 'text-ink-2', title: 'text-ink', dot: 'bg-navy-700' },
-  critical: { box: 'bg-critical-soft border-critical/10', kind: 'text-critical', title: 'text-critical font-mono', dot: 'bg-critical' },
-  verified: { box: 'bg-teal-soft border-teal/10', kind: 'text-teal', title: 'text-navy-800 font-mono', dot: 'bg-teal' },
-  action: { box: 'bg-good-soft border-good/10', kind: 'text-good', title: 'text-ink', dot: 'bg-good' },
+  default: { box: 'bg-slate-50 border-line', kind: 'text-ink-2', title: 'text-ink', dot: 'bg-navy-700' },
+  critical: { box: 'bg-surface border-line', kind: 'text-critical', title: 'text-ink font-mono', dot: 'bg-critical' },
+  verified: { box: 'bg-surface border-line', kind: 'text-teal', title: 'text-navy-800 font-mono', dot: 'bg-teal' },
+  action: { box: 'bg-surface border-line', kind: 'text-good', title: 'text-ink', dot: 'bg-good' },
 }
 
 function NodeCard({ n, className }: { n: PathNode; className?: string }) {

@@ -46,7 +46,7 @@ export function PriorCheck({ prior, problemId }: { prior: NonNullable<RootCauseC
           </tbody>
         </table>
         <div className="mt-5 rounded-lg bg-good-soft p-4 text-[14px] text-ink">
-          <p className="text-[12px] font-medium uppercase tracking-wide text-good">Confirmed outcome</p>
+          <p className="text-[13px] font-medium text-good">Confirmed outcome</p>
           <p className="mt-1">{t.outcome}</p>
         </div>
       </Drawer>

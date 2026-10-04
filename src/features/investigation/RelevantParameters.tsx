@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { ArrowRight, Info, Sparkles } from 'lucide-react'
+import { ArrowDownWideNarrow, ArrowRight, Info } from 'lucide-react'
 import { useState } from 'react'
 import { Card, Mono } from '@/components/ui/Card'
 import type { Investigation } from '@/data/investigation'
@@ -22,7 +22,7 @@ export function RelevantParameters({ inv }: { inv: Investigation }) {
           <h2 className="flex items-center gap-3 text-xl font-semibold text-ink">
             Relevant Parameters
             <span className="flex items-center gap-1 rounded bg-teal-soft px-2 py-0.5 text-[12.5px] font-normal text-teal">
-              <Sparkles className="size-3.5" /> Ranked by degradation
+              <ArrowDownWideNarrow className="size-3.5" /> Ranked by degradation
             </span>
           </h2>
           <p className="mt-1 text-[14.5px] text-ink-2">

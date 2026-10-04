@@ -12,11 +12,11 @@ function Tile({ label, children, foot, extra, className }: { label: string; chil
   return (
     <div className={clsx('flex min-w-0 flex-col justify-between gap-3 px-4 py-4', className)}>
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-ink-2 xl:whitespace-nowrap">{label}</p>
+        <p className="text-[12.5px] font-medium text-ink-2 xl:whitespace-nowrap">{label}</p>
         {extra}
       </div>
-      <div className="font-mono text-[32px] font-bold leading-none tracking-tight text-ink tabular">{children}</div>
-      <div className="font-mono text-[12px] tabular">{foot}</div>
+      <div className="text-[30px] font-semibold leading-none tracking-[-0.02em] text-ink tabular">{children}</div>
+      <div className="text-[12.5px] tabular">{foot}</div>
     </div>
   )
 }
@@ -49,7 +49,7 @@ export function KpiStrip({ kpi, rangeLabel, critical, activeCount }: Props) {
   const exposure = useCountUp(kpi.financialExposure.valueM)
 
   return (
-    <Card className="grid grid-cols-2 divide-line md:grid-cols-4 min-[1400px]:grid-cols-7 min-[1400px]:divide-x [&>*]:border-line max-[1399px]:[&>*]:border-b">
+    <Card className="grid grid-cols-2 divide-line md:grid-cols-4 wide:grid-cols-7 wide:divide-x [&>*]:border-line max-wide:[&>*]:border-b">
       <Tile label="Asset Availability" foot={<span className="text-ink-2">5 monitored assets</span>}>
         {fmt(availability, 2)}
         <Unit>%</Unit>
@@ -72,13 +72,12 @@ export function KpiStrip({ kpi, rangeLabel, critical, activeCount }: Props) {
       </Tile>
       <Tile
         label="Critical Risk"
-        className="bg-gradient-to-b from-critical-soft/40 to-transparent"
         extra={<span className="whitespace-nowrap rounded bg-critical-soft px-1.5 py-0.5 font-mono text-[11px] font-semibold text-critical">Attn Req</span>}
         foot={<span className="text-critical">{critical.map((p) => p.id).join(', ') || 'None'}</span>}
       >
         <span className={clsx('inline-flex items-center gap-3', critical.length ? 'text-critical' : 'text-ink-2')}>
           {critical.length}
-          {critical.length > 0 && <span className="size-3 animate-pulse rounded-full bg-critical" />}
+          {critical.length > 0 && <span className="size-2.5 rounded-full bg-critical" />}
         </span>
       </Tile>
       {/* Baseline lomba tidak punya data HSE: jangan tampilkan angka, nol, atau tren palsu */}

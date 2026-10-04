@@ -52,11 +52,8 @@ export function ProblemCard({ problem: p, selected, highlighted, onSelect, onHov
       onMouseLeave={() => onHover(null)}
       style={{ animationDelay: `${index * 50}ms` }}
       className={clsx(
-        'animate-fade-up cursor-pointer rounded-xl border border-l-4 bg-surface shadow-card transition',
-        sev.border,
-        selected ? 'border-y-slate-300 border-r-slate-300 shadow-md' : 'border-y-line border-r-line',
-        highlighted && !selected && 'ring-2 ring-navy-600/20',
-        'hover:shadow-md',
+        'animate-fade-up cursor-pointer rounded-xl border bg-surface shadow-card transition duration-200',
+        selected ? 'border-navy-700/50 shadow-lg' : highlighted ? 'border-slate-300' : 'border-line hover:border-slate-300',
       )}
       aria-current={selected || undefined}
     >

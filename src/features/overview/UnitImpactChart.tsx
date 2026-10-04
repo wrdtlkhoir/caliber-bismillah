@@ -70,7 +70,7 @@ export function UnitImpactChart({ units, problems, threshold, period, selectedUn
                   dimmed && 'opacity-45',
                 )}
               >
-                <p className="text-[11.5px] font-medium uppercase tracking-wide text-ink-2">{u.code}, {u.incidents} incident{u.incidents === 1 ? '' : 's'}</p>
+                <p className="text-[12.5px] font-medium text-ink-2">{u.code}, {u.incidents} incident{u.incidents === 1 ? '' : 's'}</p>
                 <p className="mt-1 truncate text-[16px] font-medium text-ink">{u.name === u.code ? `Plant ${u.code}` : u.name}</p>
 
                 <div className="relative mt-5 flex items-end gap-2 border-b border-slate-300" style={{ height: PLOT_H + 28 }}>

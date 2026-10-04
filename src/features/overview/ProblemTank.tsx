@@ -1,6 +1,6 @@
 import clsx from 'clsx'
-import { ChevronDown, ChevronRight, LayoutGrid, List, Search, SearchX, X } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { ChevronDown, ChevronLeft, ChevronRight, LayoutGrid, List, Search, SearchX, X } from 'lucide-react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Mono } from '@/components/ui/Card'
 import type { Severity } from '@/data/types'
@@ -25,8 +25,8 @@ const TABS: { key: SevFilter; label: string }[] = [
   { key: 'medium', label: 'Medium' },
 ]
 
-/** Kartu yang langsung tampil sebelum tombol "Show more". */
-const CARD_LIMIT = 4
+/** Jumlah problem per halaman. */
+const PAGE_SIZE: Record<View, number> = { cards: 4, list: 10 }
 
 export function sortProblems(list: RankedProblem[], key: SortKey) {
   const out = [...list]
@@ -51,15 +51,29 @@ interface Props {
   assistant: ReactNode
   emptyHint?: string
   onClearFilters: () => void
+  /** permintaan dari panel lain untuk menampilkan problem tertentu (seq naik setiap permintaan) */
+  focus?: { id: string; seq: number }
 }
 
-export function ProblemTank({ pool, filter, onFilter, sort, onSort, query, onQuery, selectedId, hoveredId, onSelect, onHover, assistant, emptyHint, onClearFilters }: Props) {
+export function ProblemTank({ pool, filter, onFilter, sort, onSort, query, onQuery, selectedId, hoveredId, onSelect, onHover, assistant, emptyHint, onClearFilters, focus }: Props) {
   const [view, setView] = useState<View>(() => (pool.length > 6 ? 'list' : 'cards'))
-  const [expanded, setExpanded] = useState(false)
   const visible = sortProblems(filter === 'all' ? pool : pool.filter((p) => p.severity === filter), sort)
   const count = (f: SevFilter) => (f === 'all' ? pool.length : pool.filter((p) => p.severity === f).length)
-  const shown = view === 'cards' && !expanded ? visible.slice(0, CARD_LIMIT) : visible
-  const hidden = visible.length - shown.length
+
+  // Halaman kembali ke 1 setiap kali isi daftar berubah (filter, sort, view, pencarian)
+  const size = PAGE_SIZE[view]
+  const pageCount = Math.max(1, Math.ceil(visible.length / size))
+  const resetKey = [view, sort, visible.map((p) => p.id).join(',')].join('|')
+  const [paging, setPaging] = useState({ key: resetKey, page: 0 })
+  const page = paging.key === resetKey ? Math.min(paging.page, pageCount - 1) : 0
+  const setPage = (n: number) => setPaging({ key: resetKey, page: Math.max(0, Math.min(n, pageCount - 1)) })
+  const shown = visible.slice(page * size, page * size + size)
+
+  // Problem yang dipilih dari panel lain (ranking, urgent actions) harus terlihat
+  useEffect(() => {
+    const i = visible.findIndex((p) => p.id === focus?.id)
+    if (i >= 0 && Math.floor(i / size) !== page) setPage(Math.floor(i / size))
+  }, [focus?.seq])
 
   return (
     <section className="space-y-4" aria-labelledby="problem-tank">
@@ -138,18 +152,12 @@ export function ProblemTank({ pool, filter, onFilter, sort, onSort, query, onQue
           {shown.map((p, i) => (
             <ProblemCard key={p.id} index={i} problem={p} selected={selectedId === p.id} highlighted={hoveredId === p.id} onSelect={() => onSelect(p.id)} onHover={onHover} />
           ))}
-          {(hidden > 0 || (expanded && visible.length > CARD_LIMIT)) && (
-            <button
-              onClick={() => setExpanded((v) => !v)}
-              className="w-full rounded-lg border border-dashed border-slate-300 py-2.5 text-[14px] font-medium text-navy-700 transition hover:bg-white"
-            >
-              {expanded ? 'Show fewer' : `Show ${hidden} more problem${hidden > 1 ? 's' : ''}`}
-            </button>
-          )}
         </div>
       ) : (
-        visible.length > 0 && <ProblemList problems={visible} selectedId={selectedId} hoveredId={hoveredId} onSelect={onSelect} onHover={onHover} />
+        visible.length > 0 && <ProblemList problems={shown} selectedId={selectedId} hoveredId={hoveredId} onSelect={onSelect} onHover={onHover} />
       )}
+
+      {pageCount > 1 && <Pagination page={page} pageCount={pageCount} size={size} total={visible.length} onPage={setPage} />}
 
       {visible.length === 0 && (
         <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-slate-300 py-12 text-ink-2">
@@ -161,6 +169,42 @@ export function ProblemTank({ pool, filter, onFilter, sort, onSort, query, onQue
         </div>
       )}
     </section>
+  )
+}
+
+function Pagination({ page, pageCount, size, total, onPage }: { page: number; pageCount: number; size: number; total: number; onPage: (n: number) => void }) {
+  const from = page * size + 1
+  const to = Math.min(total, from + size - 1)
+  // nomor halaman ringkas: 1 … (p-1) p (p+1) … N
+  const pages = [...new Set([0, page - 1, page, page + 1, pageCount - 1])].filter((n) => n >= 0 && n < pageCount).sort((a, b) => a - b)
+  const btn = 'grid h-8 min-w-8 place-items-center rounded-md px-2 text-[13.5px] transition disabled:pointer-events-none disabled:opacity-40'
+
+  return (
+    <nav className="flex flex-wrap items-center justify-between gap-3 pt-1" aria-label="Problem pages">
+      <p className="text-[13px] text-ink-2 tabular">
+        {from}–{to} of {total}
+      </p>
+      <div className="flex items-center gap-1">
+        <button onClick={() => onPage(page - 1)} disabled={page === 0} className={clsx(btn, 'text-ink-2 hover:bg-white hover:text-ink')} aria-label="Previous page">
+          <ChevronLeft className="size-4" />
+        </button>
+        {pages.map((n, i) => (
+          <span key={n} className="flex items-center gap-1">
+            {i > 0 && n - pages[i - 1] > 1 && <span className="px-1 text-ink-3">…</span>}
+            <button
+              onClick={() => onPage(n)}
+              aria-current={n === page ? 'page' : undefined}
+              className={clsx(btn, 'tabular', n === page ? 'border border-line bg-white font-medium text-navy-800 shadow-card' : 'text-ink-2 hover:bg-white hover:text-ink')}
+            >
+              {n + 1}
+            </button>
+          </span>
+        ))}
+        <button onClick={() => onPage(page + 1)} disabled={page === pageCount - 1} className={clsx(btn, 'text-ink-2 hover:bg-white hover:text-ink')} aria-label="Next page">
+          <ChevronRight className="size-4" />
+        </button>
+      </div>
+    </nav>
   )
 }
 
@@ -180,7 +224,7 @@ function ProblemList({
 }) {
   return (
     <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-card">
-      <div className="hidden grid-cols-[92px_minmax(0,1fr)_120px_96px_28px] gap-3 border-b border-line bg-slate-50 px-4 py-2 text-[12px] font-medium uppercase tracking-wide text-ink-2 md:grid">
+      <div className="hidden grid-cols-[92px_minmax(0,1fr)_120px_96px_28px] gap-3 border-b border-line bg-slate-50 px-4 py-2 text-[13px] font-medium text-ink-2 md:grid">
         <span>Tag</span>
         <span>Problem</span>
         <span>Status</span>
@@ -201,8 +245,7 @@ function ProblemList({
                 onMouseEnter={() => onHover(p.id)}
                 onMouseLeave={() => onHover(null)}
                 className={clsx(
-                  'grid cursor-pointer grid-cols-[92px_minmax(0,1fr)_28px] items-center gap-3 border-l-4 px-4 py-3 transition md:grid-cols-[92px_minmax(0,1fr)_120px_96px_28px]',
-                  sev.border,
+                  'grid cursor-pointer grid-cols-[92px_minmax(0,1fr)_28px] items-center gap-3 px-4 py-3 transition md:grid-cols-[92px_minmax(0,1fr)_120px_96px_28px]',
                   selectedId === p.id ? 'bg-info-soft/50' : hoveredId === p.id ? 'bg-slate-50' : 'bg-surface',
                 )}
               >

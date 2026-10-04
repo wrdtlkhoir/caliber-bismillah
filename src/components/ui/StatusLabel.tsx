@@ -14,7 +14,7 @@ export function StatusLabel({ tone = 'neutral', dashed, children, className }: {
   return (
     <span
       className={clsx(
-        'inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 font-mono text-[11px] font-medium uppercase tracking-wide',
+        'inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[12px] font-medium leading-5',
         TONE[tone],
         dashed && 'border border-dashed border-slate-300 bg-transparent',
         className,
