@@ -142,9 +142,20 @@ export interface Incident {
   rcaDue: string | null
 }
 
+/** Metadata file baseline lomba (ditulis oleh ETL), dipakai halaman Data Sources. */
+export interface SourceFile {
+  folder: string
+  name: string
+  format: 'XLSX' | 'PPTX' | string
+  sizeKB: number
+  sheets?: { name: string; rows: number }[]
+  slides?: number
+}
+
 interface Dataset {
   generatedAt: string
   source: string
+  sourceFiles: SourceFile[]
   assets: Asset[]
   incidents: Incident[]
 }
@@ -160,6 +171,7 @@ function tidy<T>(v: T): T {
 export const dataset = tidy(raw as unknown as Dataset)
 export const assets = dataset.assets
 export const incidents = dataset.incidents
+export const sourceFiles = dataset.sourceFiles
 
 export const assetByTag = (tag: string | undefined) => assets.find((a) => a.tag === tag)
 export const incidentOf = (a: Asset) => incidents.find((i) => i.ar === a.arNo || i.tag === a.tag)

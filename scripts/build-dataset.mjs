@@ -317,9 +317,31 @@ for (const a of assets) {
   if (!a.production) console.warn(`! ${a.tag}: production data missing`)
 }
 
+/* ------------------------------------------------------------------ */
+/* Manifest file sumber (untuk halaman Data Sources) — metadata saja    */
+/* ------------------------------------------------------------------ */
+const FOLDERS = [
+  ['Production Data', '.xlsx'],
+  ['Equipment Performance', '.xlsx'],
+  ['Incident Database', '.xlsx'],
+  ['RCA - Downtime Data', '.pptx'],
+]
+const sourceFiles = []
+for (const [dir, ext] of FOLDERS) {
+  for (const file of files(dir, ext)) {
+    const entry = { folder: dir, name: path.basename(file), format: ext.slice(1).toUpperCase(), sizeKB: Math.round(fs.statSync(file).size / 1024) }
+    if (ext === '.xlsx') {
+      const wb = XLSX.read(fs.readFileSync(file))
+      entry.sheets = wb.SheetNames.map((n) => ({ name: n, rows: sheetRows(wb, n).filter((r) => r.some((c) => c !== '')).length }))
+    } else entry.slides = (await slideLines(file)).length
+    sourceFiles.push(entry)
+  }
+}
+
 const dataset = {
   generatedAt: new Date().toISOString(),
   source: path.basename(ROOT),
+  sourceFiles,
   assets,
   incidents,
 }
