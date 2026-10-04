@@ -45,7 +45,7 @@ function InvestigationView({ asset, asOf }: { asset: Asset; asOf: string }) {
   const requestField = () => {
     const wr = `WR-${asOf.slice(0, 4)}-${String(Math.floor(1000 + Math.random() * 9000))}`
     setRequested(true)
-    showToast(`${wr} created — ${inv.fieldAction.replace('Request ', '')} for ${asset.tag}`)
+    showToast(`${wr} created: ${inv.fieldAction.replace('Request ', '')} for ${asset.tag}`)
   }
 
   return (
@@ -61,7 +61,7 @@ function InvestigationView({ asset, asOf }: { asset: Asset; asOf: string }) {
             <Mono className="font-semibold text-ink">{asset.tag}</Mono>
           </nav>
           <h1 className="mt-1 text-[30px] font-semibold tracking-tight text-ink">
-            {asset.tag} — {inv.headline}
+            {asset.tag}: {inv.headline}
           </h1>
         </div>
 
@@ -107,7 +107,7 @@ function InvestigationView({ asset, asOf }: { asset: Asset; asOf: string }) {
         <p className="flex max-w-[620px] items-start gap-2 font-mono text-[12.5px] text-ink-2">
           <RefreshCw className="mt-0.5 size-4 shrink-0 text-good" />
           <span>
-            Sources: {inv.sources.join(' · ')} · data as of {fmtDate(asOf)}
+            Sources: {inv.sources.join(', ')}. Data as of {fmtDate(asOf)}.
           </span>
         </p>
         <div className="flex flex-wrap items-center gap-3">
@@ -139,7 +139,7 @@ function InvestigationView({ asset, asOf }: { asset: Asset; asOf: string }) {
             <>
               <p className="mt-3 text-[12px] font-medium uppercase tracking-wide text-ink-2">Closest precedent</p>
               <p className="mt-1">
-                <Mono className="font-semibold text-navy-700">{inv.incidents[0].incident.ar ?? inv.incidents[0].incident.mto}</Mono> · {Math.round(inv.incidents[0].score * 100)}% match
+                <Mono className="font-semibold text-navy-700">{inv.incidents[0].incident.ar ?? inv.incidents[0].incident.mto}</Mono>, {Math.round(inv.incidents[0].score * 100)}% match
               </p>
               <p className="text-ink-2">
                 {inv.incidents[0].incident.title} ({inv.incidents[0].incident.plant}, {inv.incidents[0].incident.status})

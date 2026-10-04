@@ -33,7 +33,7 @@ export function SimilarIncidents({ asset, incidents }: { asset: Asset; incidents
         <div>
           <h2 className="text-xl font-semibold text-ink">Similar Historical Incidents (Incident Database)</h2>
           <p className="mt-0.5 text-[15px] text-ink-2">
-            Retrieved from {`${incidents.length ? 'the 380-incident register' : 'the incident register'}`} by equipment type, component, failure mechanism, discipline and plant — only incidents known before the selected date
+            Matched against the 380-incident register on equipment type, component, failure mechanism, discipline and plant. Only incidents recorded before the selected date are used.
           </p>
         </div>
         <div className="flex max-w-md flex-wrap justify-end gap-2" role="tablist">
@@ -60,10 +60,10 @@ export function SimilarIncidents({ asset, incidents }: { asset: Asset; incidents
             <tr className="bg-slate-100 text-[14.5px] text-ink">
               <th className="rounded-l-lg px-4 py-3 font-medium">Incident</th>
               <th className="px-4 py-3 font-medium">Equipment</th>
-              <th className="px-4 py-3 font-medium">Failure (component · mechanism)</th>
+              <th className="px-4 py-3 font-medium">Failure (component, mechanism)</th>
               <th className="px-4 py-3 font-medium">Similarity</th>
               <th className="px-4 py-3 font-medium">Matched on</th>
-              <th className="px-4 py-3 text-right font-medium">Downtime · Loss</th>
+              <th className="px-4 py-3 text-right font-medium">Downtime / loss</th>
               <th className="rounded-r-lg px-4 py-3 font-medium">Status</th>
             </tr>
           </thead>
@@ -76,10 +76,10 @@ export function SimilarIncidents({ asset, incidents }: { asset: Asset; incidents
                 </td>
                 <td className="px-4 py-4">
                   <Mono className="whitespace-nowrap text-[13px] text-ink">{r.tag}</Mono>
-                  <span className="block text-[12.5px] text-ink-2">{plantLabel(r.plant)} · Class {r.eqClass}</span>
+                  <span className="block text-[12.5px] text-ink-2">{plantLabel(r.plant)}, Class {r.eqClass}</span>
                 </td>
                 <td className="px-4 py-4 text-[14.5px] text-ink">
-                  {componentFamily(r.component)} · {mechanismOf(r)}
+                  {componentFamily(r.component)}, {mechanismOf(r)}
                   <span className="block text-[12.5px] text-ink-3">{r.title}</span>
                 </td>
                 <td className="px-4 py-4">
@@ -103,7 +103,7 @@ export function SimilarIncidents({ asset, incidents }: { asset: Asset; incidents
                   </div>
                 </td>
                 <td className="whitespace-nowrap px-4 py-4 text-right font-mono text-[13px] text-ink">
-                  {r.downtimeH} h · ${Math.round(r.totalLossK).toLocaleString('en-US')}k
+                  {r.downtimeH} h, ${Math.round(r.totalLossK).toLocaleString('en-US')}k
                 </td>
                 <td className="px-4 py-4">
                   <span className={clsx('whitespace-nowrap rounded px-2 py-0.5 text-[12.5px]', STATUS_STYLE[r.status] ?? 'bg-slate-100 text-ink-2')}>{r.status}</span>

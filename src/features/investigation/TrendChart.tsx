@@ -95,8 +95,8 @@ export function TrendChart({ points, color, unit, digits, band, lines = [], offM
           className="pointer-events-none absolute top-1.5 z-10 whitespace-nowrap rounded bg-ink px-2 py-1 font-mono text-[11.5px] text-white shadow-lg"
           style={{ left: Math.min(Math.max(x(hover!) - 60, 4), width - 150) }}
         >
-          {hv.label} · {hv.value === null ? '—' : `${hv.value.toFixed(digits)} ${unit}`}
-          {offMask?.[hover!] && ' · OFF'}
+          {hv.label}: {hv.value === null ? 'n/a' : `${hv.value.toFixed(digits)} ${unit}`}
+          {offMask?.[hover!] && ' (OFF)'}
         </div>
       )}
 

@@ -14,8 +14,8 @@ interface Props {
 export function PriorityRanking({ ranked, selectedId, hoveredId, onSelect, onHover }: Props) {
   return (
     <Card className="p-5">
-      <h2 className="text-lg font-medium text-ink">Priority Ranking (AHP)</h2>
-      <p className="mt-1 text-[13px] leading-snug text-ink-2">Multi-criteria weight calculation combining 6 operational dimensions:</p>
+      <h2 className="text-lg font-medium text-ink">Risk Priority Ranking</h2>
+      <p className="mt-1 text-[13px] leading-snug text-ink-2">Weighted score from six operational criteria</p>
 
       <ul className="mt-3 flex flex-wrap gap-1.5">
         {CRITERIA_KEYS.map((k) => (
@@ -25,7 +25,7 @@ export function PriorityRanking({ ranked, selectedId, hoveredId, onSelect, onHov
         ))}
       </ul>
 
-      <ol className="mt-4 space-y-1">
+      <ol className="mt-4 max-h-[320px] space-y-1 overflow-y-auto pr-1">
         {ranked.map((p, i) => {
           const top = ahpBreakdown(p.criteria)[0]
           const strong = p.ahp >= CRITICAL_RISK_THRESHOLD

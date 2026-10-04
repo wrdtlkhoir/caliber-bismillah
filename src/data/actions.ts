@@ -105,8 +105,8 @@ function capaKpis(a: Asset, asOf: string): ActionCase['kpis'] {
   return {
     effectiveness: { value: Math.round(rate), delta: `${rate - prev >= 0 ? '+' : ''}${(rate - prev).toFixed(1)} pp`, benchmark: 'vs prior 12 m' },
     closure: { value: mine, delta: `${mine - fleet >= 0 ? '+' : ''}${(mine - fleet).toFixed(0)}d`, benchmark: `Median of 5 RCA cases: ${fleet.toFixed(0)} d` },
-    repeat: { value: Math.round(repeatPct), badge: `${repeats.length} cases`, benchmark: 'Same plant · eq. type · component ≤ 12 m' },
-    awaiting: { value: monitoring.length, note: `${monitoring.filter((i) => i.plant === a.plant).length} in ${a.plant} · status MONITORING RESULT` },
+    repeat: { value: Math.round(repeatPct), badge: `${repeats.length} cases`, benchmark: 'Same plant, equipment type and component within 12 months' },
+    awaiting: { value: monitoring.length, note: `${monitoring.filter((i) => i.plant === a.plant).length} of them in ${a.plant}` },
   }
 }
 
@@ -124,7 +124,7 @@ export function buildActionCase(a: Asset, asOf: string): ActionCase | null {
     return {
       id: `${x.kind[0].toUpperCase()}${counters[x.kind]}`,
       title: x.text,
-      ref: `${x.rc} · ${row?.item ?? x.cause ?? ''}`,
+      ref: `${x.rc}: ${row?.item ?? x.cause ?? ''}`,
       team: x.pic,
       type: TYPE[x.kind],
       owner: x.pic,
@@ -168,7 +168,7 @@ export function buildActionCase(a: Asset, asOf: string): ActionCase | null {
     },
     {
       state: allNormal && afterRows.length >= 8 ? 'done' : 'pending',
-      title: `Recurrence watch — ${afterRows.length} week${afterRows.length === 1 ? '' : 's'} ${allNormal ? 'NORMAL' : 'with alerts'}`,
+      title: `Recurrence watch: ${afterRows.length} week${afterRows.length === 1 ? '' : 's'} ${allNormal ? 'NORMAL' : 'with alerts'}`,
       text: `Target: ${rca.targetCondition}`,
     },
   ]
@@ -178,7 +178,7 @@ export function buildActionCase(a: Asset, asOf: string): ActionCase | null {
   const sysRow = sysIdx >= 0 ? findRow(rca.actions[sysIdx].rc) : undefined
   const systemicText =
     sysIdx >= 0 && sysRow
-      ? `The failed component was repaired, but the system cause ${sysRow.id} — "${sysRow.item}" (${sysRow.evidence.replace(/\.$/, '')}) — is still open until "${actions[sysIdx].title}" is completed.`
+      ? `The failed part was repaired, but system cause ${sysRow.id} ("${sysRow.item}") is still open: ${sysRow.evidence.replace(/\.$/, '')}. It closes once "${actions[sysIdx].title}" is done.`
       : undefined
 
   // ---- Fleet vulnerability
@@ -197,16 +197,16 @@ export function buildActionCase(a: Asset, asOf: string): ActionCase | null {
   const items: FleetItem[] = [
     ...named.map((t) => {
       const hist = incidents.filter((i) => i.tag === t)
-      return { id: t, name: 'Named in pro-active action', level: hist.length ? 'ELEVATED' : 'MODERATE', note: hist.length ? `${hist.length} incidents on record` : 'Same design — roll-out planned' } as FleetItem
+      return { id: t, name: 'Named in pro-active action', level: hist.length ? 'ELEVATED' : 'MODERATE', note: hist.length ? `${hist.length} incidents on record` : 'Same design, roll-out planned' } as FleetItem
     }),
     ...peers
       .filter((i) => !named.includes(i.tag))
       .map(
         (i): FleetItem => ({
           id: i.tag,
-          name: `${i.component} · ${i.title.replace(`${i.tag} `, '')}`,
+          name: `${i.component}, ${i.title.replace(`${i.tag} `, '')}`,
           level: OPEN_STATUSES.has(i.status) && i.riskScore >= 400 ? 'ELEVATED' : OPEN_STATUSES.has(i.status) ? 'MODERATE' : 'MONITORING',
-          note: `$${Math.round(i.totalLossK).toLocaleString('en-US')}k loss · ${i.status}`,
+          note: `$${Math.round(i.totalLossK).toLocaleString('en-US')}k loss, ${i.status}`,
         }),
       ),
   ].slice(0, 4)
@@ -218,14 +218,14 @@ export function buildActionCase(a: Asset, asOf: string): ActionCase | null {
     asset: a,
     rca,
     contextCycle: own?.mto ?? rca.arNo,
-    criticality: `Class ${a.eqClass} · ${a.criticality} criticality`,
+    criticality: `Class ${a.eqClass}, ${a.criticality} criticality`,
     conditionText: preFailure ? 'Pre-failure (replay date)' : after.length ? (normalized ? 'Restored / Normal after repair' : 'Restarted / under watch') : 'Under repair',
     restored: after.length > 0 && normalized,
     preFailure,
     validation: {
       id: rca.arNo,
       rootCause: rc?.hypotheses[0].title ?? rca.rootCause,
-      by: `${own?.pic ?? '—'} (RCA PIC)`,
+      by: `${own?.pic ?? 'n/a'} (RCA PIC)`,
       at: fmtDate(rca.dateReported),
     },
     kpis: capaKpis(a, asOf),

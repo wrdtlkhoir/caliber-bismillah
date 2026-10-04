@@ -26,7 +26,7 @@ export const PLANT_NAMES: Record<string, string> = Object.fromEntries(
     .map((m) => [m[1], m[2]]),
 )
 export const plantLabel = (code: string) => PLANT_NAMES[code] ?? code
-export const PLANT_SCOPE = `${new Set(incidents.map((i) => i.plant)).size} plants · ${incidents.length} recorded incidents`
+export const PLANT_SCOPE = `${new Set(incidents.map((i) => i.plant)).size} plants, ${incidents.length} recorded incidents`
 
 /* ------------------------------------------------------------------ */
 
@@ -100,11 +100,11 @@ export function buildProblem(a: Asset, asOf: string): Problem {
   if (h.phase === 'post-repair') {
     const primary = h.params.find((x) => x.param.key === 'p1') ?? p0
     const total = a.rca?.actions.length ?? 0
-    title = `Post-failure CAPA — ${a.failureMode}`
+    title = `Post-failure CAPA: ${a.failureMode}`
     signals = [
       { label: `Restored: ${primary.param.label} ${fmtValue(primary.param, primary.value)} ${primary.param.unit}`, tone: 'neutral', icon: 'check' },
       { label: `${total - open.length}/${total} CAPA actions closed`, tone: open.length ? 'medium' : 'neutral', icon: 'trend' },
-      { label: `Failure ${fmtDate(a.failureDate)} · ${a.summary.downtimeH} h downtime`, tone: 'neutral' },
+      { label: `Failed ${fmtDate(a.failureDate)}, ${a.summary.downtimeH} h downtime`, tone: 'neutral' },
     ]
   } else if (p0) {
     const dir = (ph: ParamHealth) => (ph.param.direction === 'high' ? 'rising' : 'falling')
@@ -112,7 +112,7 @@ export function buildProblem(a: Asset, asOf: string): Problem {
       const where = p0.state === 'normal' ? 'approaching alarm' : `${p0.param.direction === 'high' ? 'above' : 'below'} ${p0.state}`
       title = `${p0.param.label} ${where}${p1 && p1.index >= 0.3 ? ` with ${dir(p1)} ${p1.param.label}` : ''}`
     } else if (h.phase === 'early-warning') {
-      title = `${p0.param.label} ${p0.param.direction === 'high' ? 'trending up' : 'trending down'}${p0.daysToAlarm ? ` — alarm projected in ~${p0.daysToAlarm} days` : ''}`
+      title = `${p0.param.label} ${p0.param.direction === 'high' ? 'trending up' : 'trending down'}${p0.daysToAlarm ? `, alarm projected in ~${p0.daysToAlarm} days` : ''}`
     }
     signals = h.params.slice(0, 2).map(paramSignal)
     if (p0.daysToTrip && p0.daysToTrip > 0 && h.phase !== 'early-warning')
@@ -136,11 +136,11 @@ export function buildProblem(a: Asset, asOf: string): Problem {
     severity,
     phase: h.phase,
     criteria,
-    area: `${plantLabel(a.plant)} · ${a.type}`,
+    area: `${plantLabel(a.plant)}, ${a.type}`,
     title,
     signals,
     status,
-    lead: inc?.pic ?? '—',
+    lead: inc?.pic ?? 'n/a',
     unitId: a.plant,
     detectedAt: h.phase === 'post-repair' || h.phase === 'trip' ? a.failureDate : episodeStart(a, asOf),
   }

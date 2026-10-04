@@ -16,20 +16,20 @@ function answer(q: Question, p: RankedProblem, rank: number, total: number, acti
     case 'Why prioritized?': {
       const top = ahpBreakdown(p.criteria).slice(0, 3)
       return [
-        `${p.id} ranks #${rank} of ${total} with AHP score ${p.ahp.toFixed(2)}.`,
+        `${p.id} ranks #${rank} of ${total} with a risk priority score of ${p.ahp.toFixed(2)}.`,
         `Largest drivers: ${top.map((t) => `${t.label} (${Math.round(t.score * 100)} × ${Math.round(t.weight * 100)}% = ${(t.contribution * 100).toFixed(1)} pts)`).join(', ')}.`,
       ]
     }
     case 'What changed?':
       return [
         `Detected ${new Date(p.detectedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}.`,
-        ...p.signals.filter((s) => s.tone !== 'neutral').map((s) => `• ${s.label}`),
+        ...p.signals.filter((s) => s.tone !== 'neutral').map((s) => s.label),
       ]
     case 'Show evidence':
-      return [`Evidence linked to ${p.equipment}:`, ...p.signals.map((s) => `• ${s.label}`), `Area: ${p.area}`]
+      return [`Evidence linked to ${p.equipment}:`, ...p.signals.map((s) => s.label), `Area: ${p.area}`]
     case 'Next step?':
       return action
-        ? [`${action.task}.`, `Owner ${action.owner} · due ${action.due} · status ${action.status}.`]
+        ? [`${action.task}.`, `Owner ${action.owner}, due ${action.due}, status ${action.status}.`]
         : [`No action assigned yet. Recommend lead ${p.lead} to complete diagnosis and raise a work order.`]
   }
 }

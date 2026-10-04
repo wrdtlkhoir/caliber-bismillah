@@ -66,10 +66,10 @@ export function AssetSummary({ problem, inv }: { problem: Problem; inv: Investig
           </span>
         </div>
         <p className="mt-1 text-[15px] font-medium text-ink">
-          {inv.asset.name} · Class {inv.asset.eqClass}
+          {inv.asset.name}, Class {inv.asset.eqClass}
         </p>
         <p className="text-[15px] text-ink-2">
-          {inv.asset.type} · {plantLabel(inv.asset.plant)} ({inv.asset.plant})
+          {inv.asset.type}, {plantLabel(inv.asset.plant)} ({inv.asset.plant})
         </p>
       </div>
 

@@ -24,6 +24,8 @@ export interface Hypothesis {
   scores: RcScores
   evidence: Evidence[]
   correlated?: { label: string; value: string; tone: 'critical' | 'high' | 'neutral' }[]
+  /** item verifikasi RCA (P1, X2, …) yang menjadi dasar hipotesis — dipakai untuk mencari solusinya */
+  rcIds: string[]
   causalLoopValidated?: boolean
 }
 
@@ -154,13 +156,13 @@ export function buildRootCause(a: Asset, asOf: string): RootCauseCase | null {
       : null
 
   const h1Evidence: Evidence[] = [
-    ...ngP.map((v) => ({ text: v.evidence, source: `${v.id} · 4P verification`, status: 'support' as const })),
-    ...rca.fourMVerification.filter((v) => v.result === 'NG').slice(0, 2).map((v) => ({ text: v.evidence, source: `${v.id} · 4M+1E verification`, status: 'support' as const })),
+    ...ngP.map((v) => ({ text: v.evidence, source: `${v.id} 4P verification`, status: 'support' as const })),
+    ...rca.fourMVerification.filter((v) => v.result === 'NG').slice(0, 2).map((v) => ({ text: v.evidence, source: `${v.id} 4M+1E verification`, status: 'support' as const })),
     ...(corr !== null
       ? [
           {
             text: `${param(linkedNg[0])!.label} and ${param(linkedNg[1])!.label} co-trend (r = ${corr.toFixed(2)}) over ${pre.length} weeks`,
-            source: 'Weekly CM record · computed',
+            source: 'Weekly CM record (computed)',
             status: 'support' as const,
           },
         ]
@@ -174,6 +176,7 @@ export function buildRootCause(a: Asset, asOf: string): RootCauseCase | null {
     confidence: 0,
     scores: h1Scores,
     evidence: h1Evidence,
+    rcIds: ng.map((v) => v.id),
     correlated: linkedNg.map((k) => {
       const p = param(k)!
       const v = failRow.values[k]
@@ -193,8 +196,9 @@ export function buildRootCause(a: Asset, asOf: string): RootCauseCase | null {
       return {
         id: `H${i + 2}`,
         title: alt.title,
-        summary: `Ruled out in ${alt.id} verification: ${row.item.toLowerCase()} — ${row.evidence}`,
+        summary: `Ruled out in ${alt.id} verification (${row.item.toLowerCase()}). ${row.evidence}`,
         confidence: 0,
+        rcIds: [alt.id],
         scores: {
           evidence: 0.2 / 2,
           historical: Math.min(0.6, 0.15 + 0.1 * histHits),
@@ -204,7 +208,7 @@ export function buildRootCause(a: Asset, asOf: string): RootCauseCase | null {
           controllability: 0.3,
         },
         evidence: [
-          { text: row.evidence, source: `${row.id} · 4P verification (G = meets standard)`, status: 'contradict' },
+          { text: row.evidence, source: `${row.id} 4P verification (G, meets standard)`, status: 'contradict' },
           histHits
             ? { text: `${histHits} related incidents in the register`, source: 'Incident Database', status: 'missing' }
             : { text: 'No matching precedent in the incident register', source: 'Incident Database', status: 'missing' },
@@ -230,14 +234,14 @@ export function buildRootCause(a: Asset, asOf: string): RootCauseCase | null {
           id: twin.incident.tag,
           when: fmtDate(twin.incident.date, { month: 'short', year: 'numeric' }),
           rows: [
-            { signal: 'Plant / class', current: `${a.plant} · ${a.eqClass}`, twin: `${twin.incident.plant} · ${twin.incident.eqClass}` },
-            { signal: 'Equipment type', current: own?.eqType ?? '—', twin: twin.incident.eqType },
-            { signal: 'Component', current: own?.component ?? '—', twin: twin.incident.component },
-            { signal: 'Failure mechanism', current: own ? mechanismOf(own) : '—', twin: mechanismOf(twin.incident) },
+            { signal: 'Plant / class', current: `${a.plant}, class ${a.eqClass}`, twin: `${twin.incident.plant}, class ${twin.incident.eqClass}` },
+            { signal: 'Equipment type', current: own?.eqType ?? 'n/a', twin: twin.incident.eqType },
+            { signal: 'Component', current: own?.component ?? 'n/a', twin: twin.incident.component },
+            { signal: 'Failure mechanism', current: own ? mechanismOf(own) : 'n/a', twin: mechanismOf(twin.incident) },
             { signal: 'Downtime', current: `${rca.impact.downtimeH} h`, twin: `${twin.incident.downtimeH} h` },
             { signal: 'Total loss', current: `$${(own?.totalLossK ?? 0).toLocaleString('en-US')}k`, twin: `$${twin.incident.totalLossK.toLocaleString('en-US')}k` },
           ],
-          outcome: `${twin.incident.title} — ${twin.incident.status}${twin.incident.ar ? ` (${twin.incident.ar})` : ''}. Similarity ${Math.round(twin.score * 100)}% on ${twin.reasons.join(', ')}.`,
+          outcome: `${twin.incident.title} (${twin.incident.status}${twin.incident.ar ? `, ${twin.incident.ar}` : ''}). Similarity ${Math.round(twin.score * 100)}% on ${twin.reasons.join(', ')}.`,
         },
       }
     : undefined
@@ -246,30 +250,30 @@ export function buildRootCause(a: Asset, asOf: string): RootCauseCase | null {
   const firstCorrective = rca.actions.find((x) => x.kind === 'corrective')
   const path: PathNode[] = [
     { kind: 'Target node', title: a.tag, sub: a.type, tone: 'default' },
-    { kind: 'Component', title: own?.component ?? '—', sub: `${own?.eqType ?? ''} · ${a.discipline}`, tone: 'default' },
+    { kind: 'Component', title: own?.component ?? 'n/a', sub: `${own?.eqType ?? ''}, ${a.discipline}`, tone: 'default' },
     { kind: 'Failure mode', title: a.failureMode.replace(/\s*\(.*\)$/, ''), sub: (a.failureMode.match(/\((.*)\)/) ?? [])[1] ?? own?.mechanism ?? '', tone: 'default' },
     {
       kind: 'Active signatures',
-      title: h1.correlated?.[0] ? `${h1.correlated[0].label.split(' ').slice(-1)[0]} ${h1.correlated[0].value}` : '—',
+      title: h1.correlated?.[0] ? `${h1.correlated[0].label.split(' ').slice(-1)[0]} ${h1.correlated[0].value}` : 'n/a',
       sub: h1.correlated?.[1] ? `${h1.correlated[1].label} ${h1.correlated[1].value}` : '',
       tone: 'critical',
     },
-    { kind: 'Verified record', title: rca.arNo, sub: `${rca.severity} · Pre-risk ${rca.preRisk}`, tone: 'verified', badge: 'RCA' },
-    ...(firstCorrective ? [{ kind: 'Corrective action', title: firstCorrective.text.split(' ').slice(0, 4).join(' '), sub: `${firstCorrective.pic} · ${firstCorrective.status ?? 'Planned'}`, tone: 'action' as const }] : []),
-    ...(rca.pmSchedule[0] ? [{ kind: 'PM established', title: rca.pmSchedule[0].no, sub: `${rca.pmSchedule[0].interval} · ${rca.pmSchedule[0].group}`, tone: 'action' as const }] : []),
+    { kind: 'Verified record', title: rca.arNo, sub: `${rca.severity}, pre-risk ${rca.preRisk}`, tone: 'verified', badge: 'RCA' },
+    ...(firstCorrective ? [{ kind: 'Corrective action', title: firstCorrective.text.split(' ').slice(0, 4).join(' '), sub: `${firstCorrective.pic}, ${firstCorrective.status ?? 'Planned'}`, tone: 'action' as const }] : []),
+    ...(rca.pmSchedule[0] ? [{ kind: 'PM established', title: rca.pmSchedule[0].no, sub: `${rca.pmSchedule[0].interval}, ${rca.pmSchedule[0].group}`, tone: 'action' as const }] : []),
   ]
 
   // ---- Audit trail dari kronologi RCA
   const audit: AuditEntry[] = [
     ...rca.chronology.map((c, i) => ({
-      time: `${fmtDate(c.date, { day: '2-digit', month: 'short' })}${c.time ? ` · ${c.time}` : ''}`,
+      time: `${fmtDate(c.date, { day: '2-digit', month: 'short' })}${c.time ? `, ${c.time}` : ''}`,
       actor: actorOf(c.text, i),
       text: c.text,
     })),
     {
       time: fmtDate(rca.dateReported, { day: '2-digit', month: 'short' }),
       actor: 'Lead Engineer',
-      text: `${rca.arNo} registered (${rca.arType}) — PIC ${own?.pic ?? '—'}, pre-risk ${rca.preRisk}, severity ${rca.severity}.`,
+      text: `${rca.arNo} registered (${rca.arType}). PIC ${own?.pic ?? 'n/a'}, pre-risk ${rca.preRisk}, severity ${rca.severity}.`,
     },
   ]
 

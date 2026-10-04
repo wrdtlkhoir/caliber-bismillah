@@ -26,7 +26,7 @@ export function RelevantParameters({ inv }: { inv: Investigation }) {
             </span>
           </h2>
           <p className="mt-1 text-[14.5px] text-ink-2">
-            Condition-monitoring record · <span className="font-medium text-ink">{breached}</span> of {inv.params.length} parameters beyond alarm ({inv.liveSensors} signals incl. PI tags)
+            Condition-monitoring record. <span className="font-medium text-ink">{breached}</span> of {inv.params.length} parameters beyond alarm ({inv.liveSensors} signals incl. PI tags)
           </p>
         </div>
         <button onClick={() => setShowAll((v) => !v)} className="flex items-center gap-1 text-[15px] font-medium text-navy-700 hover:underline" aria-expanded={showAll}>

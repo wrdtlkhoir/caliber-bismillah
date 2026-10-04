@@ -94,7 +94,7 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
   const createReview = (fleetId: string) => {
     const rv = `RV-${fleetId.replace('-', '')}-${Math.floor(100 + Math.random() * 900)}`
     setCapa((c) => ({ ...c, reviews: { ...c.reviews, [fleetId]: rv } }))
-    showToast(`${rv} created — pro-active review for ${fleetId}`)
+    showToast(`${rv} created: pro-active review for ${fleetId}`)
   }
 
   return (
@@ -108,7 +108,7 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
             <span className="text-ink">Action &amp; Reliability Loop</span>
           </nav>
           <h1 className="mt-1 text-[30px] font-semibold tracking-tight text-navy-900">Action &amp; Reliability Loop</h1>
-          <p className="text-[16px] text-ink-2">What should we do — and did it actually work?</p>
+          <p className="text-[16px] text-ink-2">What should we do, and did it actually work?</p>
         </div>
         <p className="flex items-center gap-2 text-[14px] text-ink-2">
           MTO No.: <Mono className="rounded bg-info-soft px-2 py-1 text-[13px] font-semibold text-navy-800">{ac.contextCycle}</Mono>
@@ -118,7 +118,7 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
       {ac.preFailure && (
         <p className="flex items-center gap-2 rounded-lg border border-medium/30 bg-medium-soft px-4 py-2.5 text-[14px] text-ink">
           <TriangleAlert className="size-4 shrink-0 text-[#b7860b]" />
-          At the replay date ({fmtDate(asOf)}) this failure has not happened yet — the CAPA below is the record from {ac.rca.arNo}, reported {fmtDate(ac.rca.dateReported)}.
+          At the replay date ({fmtDate(asOf)}) this failure has not happened yet. The CAPA below is the record from {ac.rca.arNo}, reported {fmtDate(ac.rca.dateReported)}.
         </p>
       )}
 
@@ -162,7 +162,7 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
           <p className="text-[15px] text-ink">
             RCA PIC: <span className="font-medium">{problem.lead}</span>
           </p>
-          <Mono className="text-[13px] text-ink-2">Failure: {fmtDate(ac.asset.failureDate)} · {ac.rca.impact.downtimeH} h</Mono>
+          <Mono className="text-[13px] text-ink-2">Failed {fmtDate(ac.asset.failureDate)}, {ac.rca.impact.downtimeH} h downtime</Mono>
         </div>
       </Card>
 
@@ -177,7 +177,7 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
         </div>
         <Mono className="rounded-md bg-white/10 px-3 py-1.5 text-[13px]">{validation.id}</Mono>
         <span className="rounded-md bg-white/10 px-3 py-1.5 text-[13.5px]">
-          {validation.by} · {validation.at}
+          {validation.by}, {validation.at}
         </span>
       </section>
 
@@ -227,7 +227,7 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
                     <Mono className="shrink-0 font-semibold text-navy-700">{pm.no}</Mono>
                     <span className="flex-1 text-ink">{pm.description}</span>
                     <span className="shrink-0 text-ink-2">
-                      {pm.interval} · {pm.group}
+                      {pm.interval}, {pm.group}
                     </span>
                   </li>
                 ))}
@@ -240,7 +240,7 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
                   <li key={r.action} className="rounded-lg bg-slate-50 px-3 py-2 text-[13.5px]">
                     <p className="text-ink">{r.action}</p>
                     <p className="text-ink-2">
-                      <span className="text-high">Risk:</span> {r.risk} · <span className="text-good">Countermeasure:</span> {r.countermeasure} ({r.pic})
+                      <span className="text-high">Risk:</span> {r.risk}. <span className="text-good">Countermeasure:</span> {r.countermeasure} ({r.pic})
                     </p>
                   </li>
                 ))}
@@ -256,7 +256,7 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
               <h2 className="text-[21px] font-medium leading-tight text-ink">Post-Action Verification</h2>
               <p className="mt-1 text-[13.5px] text-ink-2">
                 {ac.verification.title}
-                <br />— Before vs After
+                <br />Before and after repair
               </p>
             </div>
             <span className={clsx('flex shrink-0 items-center gap-1 rounded px-2 py-1 text-[13px] font-medium', restored ? 'bg-good-soft text-good' : 'bg-medium-soft text-[#b7860b]')}>
@@ -332,7 +332,7 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
               <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-teal-soft text-teal">
                 <Sparkles className="size-5" />
               </span>
-              Cross-Equipment Learning — Fleet Vulnerability
+              Cross-equipment learning: fleet vulnerability
             </h2>
             <span className="shrink-0 rounded bg-info-soft px-2 py-1 text-[13px] text-navy-700">AI Intelligence</span>
           </header>
@@ -345,7 +345,7 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
                     <Mono className="font-semibold">{f.id}</Mono> <span className="text-ink-2">({f.name})</span>
                   </p>
                   <p className={clsx('text-[13px]', f.level === 'ELEVATED' ? 'text-critical' : f.level === 'MODERATE' ? 'text-high' : 'text-ink')}>
-                    {f.level} · {f.note}
+                    {f.level}, {f.note}
                   </p>
                 </div>
                 {capa.reviews[f.id] ? (
@@ -363,22 +363,6 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
         </Card>
       </div>
 
-      {/* Loop footer */}
-      <Card className="flex flex-wrap items-center justify-between gap-4 bg-slate-50 px-5 py-4">
-        <ol className="flex flex-wrap items-center gap-2 text-[14px]">
-          {['Problem', 'Diagnosis', 'Human Validation', 'Action', 'Outcome'].map((s, i) => (
-            <Fragment key={s}>
-              {i > 0 && <span className="text-ink-3">→</span>}
-              <li className="rounded-md bg-white px-2.5 py-1 text-ink shadow-card">{s}</li>
-            </Fragment>
-          ))}
-        </ol>
-        <p className="max-w-xl text-right text-[15px] text-ink">
-          {capa.state === 'closed'
-            ? 'This case is now verified institutional knowledge. RCA model weights and cross-fleet failure priors have been automatically calibrated for future recommendations.'
-            : 'Once verified and closed, this case becomes institutional knowledge used to calibrate RCA weights and cross-fleet failure priors.'}
-        </p>
-      </Card>
 
       <AddActionModal
         open={addOpen}
@@ -386,7 +370,7 @@ function ActionsView({ problem, ac, asOf }: { problem: Problem; ac: ActionCase; 
         nextId={`A${actions.length + 1}-${Date.now().toString(36)}`}
         onAdd={(a) => {
           setCapa((c) => ({ ...c, actions: [...c.actions, a] }))
-          showToast(`${a.ref} created — ${a.title}`)
+          showToast(`${a.ref} created: ${a.title}`)
         }}
       />
 

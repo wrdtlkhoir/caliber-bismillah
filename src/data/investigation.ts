@@ -158,7 +158,7 @@ export function buildInvestigation(a: Asset, asOf: string): Investigation {
       ? { label: 'Tripped / Stopped', tone: 'critical' }
       : rate !== null && maxRate
         ? { label: `Running (${Math.round((rate / maxRate) * 100)}% rate)`, tone: health.phase === 'alarm' ? 'medium' : 'good' }
-        : { label: health.phase === 'alarm' ? 'Running · in alarm' : 'Running', tone: health.phase === 'alarm' ? 'medium' : 'good' }
+        : { label: health.phase === 'alarm' ? 'Running in alarm' : 'Running', tone: health.phase === 'alarm' ? 'medium' : 'good' }
 
   // --- Banner
   const breached = health.params.filter((x) => x.state !== 'normal').length
@@ -167,14 +167,14 @@ export function buildInvestigation(a: Asset, asOf: string): Investigation {
     ? {
         lead: 'All parameters',
         delta: '',
-        rest: `back within limits after the ${fmtDate(a.failureDate)} repair · ${postWeeks} week${postWeeks === 1 ? '' : 's'} of NORMAL readings`,
+        rest: `back within limits after the ${fmtDate(a.failureDate)} repair, with ${postWeeks} week${postWeeks === 1 ? '' : 's'} of NORMAL readings`,
       }
     : worst
     ? {
         lead: worst.param.label,
         delta: `${signed(worst.changePct, 0)}%`,
-        rest: `vs 4 weeks ago · ${breached} of ${a.params.length} parameters beyond alarm${
-          worst.daysToTrip ? ` · trend reaches trip in ~${worst.daysToTrip} days` : worst.daysToAlarm ? ` · alarm projected in ~${worst.daysToAlarm} days` : ''
+        rest: `vs 4 weeks ago. ${breached} of ${a.params.length} parameters beyond alarm${
+          worst.daysToTrip ? `, trip projected in ~${worst.daysToTrip} days` : worst.daysToAlarm ? `, alarm projected in ~${worst.daysToAlarm} days` : ''
         }`,
       }
     : { lead: 'No readings', delta: '', rest: 'before the selected date' }
@@ -187,7 +187,7 @@ export function buildInvestigation(a: Asset, asOf: string): Investigation {
           return {
             tag: t.Name,
             label: t.Description,
-            value: v === null || v === undefined ? '—' : `${v} ${t.engunits}`,
+            value: v === null || v === undefined ? 'n/a' : `${v} ${t.engunits}`,
             state: p.running[pi] ? 'normal' : 'offline',
           }
         })
@@ -233,26 +233,26 @@ export function buildInvestigation(a: Asset, asOf: string): Investigation {
       kind: 'sensor',
       title: 'Sensor anomaly',
       headline: s1 ? `${s1.param.label} ${signed(pctVsBase(s1), 0)}%${s2 ? ` & ${s2.param.label} ${signed(pctVsBase(s2), 0)}%` : ''}` : 'No anomaly',
-      detail: `vs baseline · weekly CM ${latest ? fmtDate(latest.date) : ''}`,
+      detail: `Compared with baseline, weekly CM ${latest ? fmtDate(latest.date) : ''}`,
     },
     {
       kind: 'health',
       title: 'Machine health',
       headline: health.phase === 'post-repair' && a.rca ? 'Root cause verified in RCA' : `Likely ${topMech}`,
-      detail: top5.length ? `Pattern match ${Math.round(top5[0].score * 100)}% · ${similar.length} similar incidents` : 'No similar incidents before this date',
+      detail: top5.length ? `Pattern match ${Math.round(top5[0].score * 100)}% across ${similar.length} similar incidents` : 'No similar incidents before this date',
     },
     {
       kind: 'hazard',
       title: 'Operational hazard',
       headline: a.eqClass === 'A' ? `Trip risk → ${plantLabel(a.plant)} shutdown` : `Uptime loss → ${plantLabel(a.plant)}`,
-      detail: worst?.daysToTrip ? `Trend reaches trip in ~${worst.daysToTrip} days` : `Most common impact: ${mode(top5.map((s) => s.incident.impact)) ?? own?.impact ?? '—'}`,
+      detail: worst?.daysToTrip ? `Trend reaches trip in ~${worst.daysToTrip} days` : `Most common impact: ${mode(top5.map((s) => s.incident.impact)) ?? own?.impact ?? 'n/a'}`,
     },
     health.phase === 'post-repair' && a.rca
       ? {
           kind: 'financial',
           title: 'Financial impact (actual)',
           headline: `Loss incurred: $${a.rca.impact.lossK.toLocaleString('en-US')}k`,
-          detail: `${a.rca.impact.downtimeH} h downtime · ${a.rca.impact.productionLossT.toLocaleString('en-US')} t production loss`,
+          detail: `${a.rca.impact.downtimeH} h downtime and ${a.rca.impact.productionLossT.toLocaleString('en-US')} t production loss`,
           note: `Basis: ${a.rca.arNo} RCA report`,
         }
       : {

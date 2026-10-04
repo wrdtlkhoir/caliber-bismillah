@@ -28,7 +28,7 @@ export function ParameterCard({ param }: { param: TrendParam }) {
         <div className="min-w-0">
           <h3 className="text-[14.5px] text-ink">{param.label}</h3>
           <p className="mt-2 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-            <Mono className={clsx('text-[28px] font-bold leading-none', valueColor)}>{last ? Number(last.value.toFixed(param.digits)) : '—'}</Mono>
+            <Mono className={clsx('text-[28px] font-bold leading-none', valueColor)}>{last ? Number(last.value.toFixed(param.digits)) : 'n/a'}</Mono>
             <Mono className="text-[15px] text-ink-2">{param.unit}</Mono>
             <Mono className={clsx('text-[12.5px]', TONE_TEXT[param.delta.tone])}>
               <span aria-hidden>{param.delta.dir === 'up' ? '▲' : '▼'}</span> {param.delta.text}
@@ -63,7 +63,7 @@ export function ParameterCard({ param }: { param: TrendParam }) {
 
       <footer className="mt-4 flex items-center justify-between text-[13px] text-ink-2">
         <span>{param.normalText}</span>
-        <Mono className="text-[12px] text-ink-3">{param.points.length} wk · weekly CM</Mono>
+        <Mono className="text-[12px] text-ink-3">{param.points.length} weekly readings</Mono>
       </footer>
     </article>
   )

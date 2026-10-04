@@ -63,7 +63,7 @@ CALIBER memakai metode **analitik yang bisa dijelaskan**, semuanya di `src/lib/a
 | Health & early warning | Baseline (6 pembacaan normal pertama, mean ± 2σ), *degradation index* (0 = baseline, 1 = trip), regresi linear 6 minggu terakhir → **proyeksi hari menuju alarm/trip** | Page 1, 2 |
 | Similar incident retrieval | Skor kemiripan berbobot: tipe equipment 30%, keluarga komponen 30%, mekanisme 25%, disiplin 10%, plant 5%. Hanya insiden yang sudah terjadi sebelum tanggal replay | Page 2, 3, 4 |
 | Prioritas problem | AHP 6 kriteria. Konsekuensi (loss & produksi dari RCA), pre-risk, kelas aset, degradasi saat ini, rekurensi (insiden mirip) | Page 1 |
-| Ranking root cause | AHP penuh: **pairwise matrix Saaty → eigenvector → Consistency Ratio (≈0.06)** → sintesis skor hipotesis. Evidence dari tabel 4P/4M+1E (NG = mendukung, G = membantah) + korelasi tren CM | Page 3 |
+| Ranking root cause | AHP penuh: **pairwise matrix Saaty (bisa diisi supervisor/user) → eigenvector → Consistency Ratio** → sintesis skor hipotesis. Evidence dari tabel 4P/4M+1E (NG = mendukung, G = membantah) + korelasi tren CM | Page 3 |
 | KPI | Agregasi Incident Database per jendela waktu (downtime, loss, exposure risiko terbuka, closure rate, repeat pattern) | Page 1, 4 |
 
 **Pengembangan berikutnya (opsional):** *Ask CALIBER* bisa disambungkan ke LLM (mis. Claude API) dengan pola
@@ -122,7 +122,8 @@ src/
 - **Problem Tank**:
   - Aset dengan fase early-warning / alarm / trip / CAPA.
   - Sinyal berisi nilai asli terhadap limit, plus proyeksi "Trip in ~N d".
-  - Ranking AHP dan Ask CALIBER.
+  - Kotak pencarian, filter severity, urutan, dan pilihan tampilan **Cards / List** supaya tetap rapi saat problem banyak (kartu dibatasi 4 dengan tombol *Show more*).
+  - **Risk Priority Ranking** (skor berbobot 6 kriteria) dan Ask CALIBER.
 - **Urgent Actions**: action CAPA terbuka dari laporan RCA, ditandai *Overdue* relatif terhadap tanggal replay.
 - **Downtime vs Loss by Plant**: data dari Incident Database. Klik plant untuk memfilter problem.
 
@@ -138,12 +139,14 @@ src/
 ### Page 3 — Root Cause & Decision (`/root-cause/:tag`)
 - **H1** = root cause terverifikasi dari RCA. Bukti diambil dari item 4P / 4M+1E berstatus NG, ditambah korelasi tren CM yang dihitung.
 - **H2/H3** = item berstatus G yang membantah hipotesis alternatif (mis. *process surge*, *rotor unbalance*).
-- **AHP pairwise**: matriks, λmax, CI, dan CR bisa dilihat lewat *View pairwise comparison matrix*.
+- **Pairwise matrix bisa diisi**: lewat *Fill pairwise matrix*, supervisor/user memilih nilai Saaty (1/9 sampai 9). Bobot, λmax, CI, dan CR dihitung langsung. Penilaian hanya bisa disimpan kalau CR < 0.10, lalu dipakai untuk ranking hipotesis dan dicatat siapa pengisinya.
+- **Decision constraints**: ikon pensil membuka pop-up untuk menambah batasan, misalnya downtime window, budget, spare part, manpower, permit, atau komitmen produksi.
+- **Solution impact report**: untuk setiap solusi CAPA dari hipotesis terpilih, ditampilkan dampak baik, dampak buruk (termasuk risk analysis dari RCA), dan benturan dengan constraint.
 - **Engineer Validation**: Accept / Modify / Request Evidence / Reject. Semua aksi masuk audit trail yang diisi dari **kronologi RCA asli**.
 - **Historical Prior** (insiden mirip yang sudah ditutup) dan **Knowledge Path**: aset → komponen → mode → sinyal → AR → CAPA → PM.
 
 ### Page 4 — Action & Reliability Loop (`/actions/:tag`)
-- **CAPA dari RCA**: corrective, pro-active, dan preventive, lengkap dengan PIC, tanggal rencana, dan status. Status bisa diubah, dan action baru bisa ditambahkan.
+- **CAPA dari RCA**: corrective, pro-active, dan preventive, lengkap dengan PIC, tanggal rencana, dan status. Status bisa diubah, action baru bisa ditambahkan, dan tabel bisa difilter per status (Open / Not started / In progress / Done) serta diurutkan berdasarkan due date, priority, status, atau tipe.
 - **PM schedule** dan **risk analysis** dari laporan RCA.
 - **Verifikasi before/after** memakai history kondisi asli (sebelum dan sesudah repair), ditambah pengecekan normalisasi dan recurrence watch.
 - **KPI dari Incident DB**: risk closure rate, CAPA plan lead time, repeat pattern rate, dan jumlah insiden in monitoring.

@@ -67,7 +67,7 @@ export function ProblemCard({ problem: p, selected, highlighted, onSelect, onHov
             <span className={clsx('size-1.5 rounded-full', p.severity === 'medium' ? 'bg-ink-2' : sev.bar)} />
             {sev.label}
           </span>
-          <Mono className="text-[13px] font-semibold text-ink">AHP: {p.ahp.toFixed(2)}</Mono>
+          <Mono className="text-[13px] font-semibold text-ink">Priority {p.ahp.toFixed(2)}</Mono>
           <span className="ml-auto flex items-center gap-1.5 text-[13px] text-ink-2">
             <Factory className="size-4 text-ink-3" />
             {p.area}

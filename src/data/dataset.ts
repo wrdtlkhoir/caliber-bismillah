@@ -149,7 +149,15 @@ interface Dataset {
   incidents: Incident[]
 }
 
-export const dataset = raw as unknown as Dataset
+/** Rapikan teks sumber untuk tampilan: " — " di laporan RCA/insiden ditampilkan sebagai ": ". File asli tidak diubah. */
+function tidy<T>(v: T): T {
+  if (typeof v === 'string') return v.replace(/\s+—\s+/g, ': ') as T
+  if (Array.isArray(v)) return v.map(tidy) as T
+  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, tidy(x)])) as T
+  return v
+}
+
+export const dataset = tidy(raw as unknown as Dataset)
 export const assets = dataset.assets
 export const incidents = dataset.incidents
 

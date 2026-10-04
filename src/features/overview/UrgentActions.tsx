@@ -8,10 +8,12 @@ import { actionStatusStyle } from '@/lib/severity'
 export function UrgentActions({ actions, total, onSelect }: { actions: UrgentAction[]; total: number; onSelect: (id: string) => void }) {
   return (
     <Card className="p-5">
-      <header className="flex items-center gap-3">
-        <h2 className="whitespace-nowrap text-lg font-medium text-ink">Urgent Actions</h2>
-        <Mono className="whitespace-nowrap rounded bg-critical-soft px-1.5 py-0.5 text-[11.5px] font-medium text-critical">{total} Open</Mono>
-        <span className="ml-auto whitespace-nowrap text-[13px] text-ink-3">From RCA CAPA plans</span>
+      <header>
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-medium text-ink">Urgent Actions</h2>
+          <Mono className="whitespace-nowrap rounded bg-critical-soft px-1.5 py-0.5 text-[11.5px] font-medium text-critical">{total} open</Mono>
+        </div>
+        <p className="mt-0.5 text-[13px] text-ink-3">Open CAPA items from the RCA reports</p>
       </header>
 
       <ul className="mt-4 space-y-3">
@@ -24,19 +26,19 @@ export function UrgentActions({ actions, total, onSelect }: { actions: UrgentAct
                 onClick={() => onSelect(a.problemId)}
                 className={clsx('w-full rounded-lg border border-l-[3px] border-line px-3 py-2.5 text-left transition hover:shadow-card', s.card, s.border)}
               >
-                <div className="flex items-center justify-between text-[13px]">
-                  <Mono className="font-medium text-ink">{a.problemId}</Mono>
-                  <span className={clsx('flex items-center gap-1', a.overdue ? 'font-medium text-critical' : 'text-ink')}>
+                <div className="flex items-start justify-between gap-2 text-[13px]">
+                  <Mono className="shrink-0 font-medium text-ink">{a.problemId}</Mono>
+                  <span className={clsx('flex min-w-0 items-center gap-1 text-right', a.overdue ? 'font-medium text-critical' : 'text-ink')}>
                     {a.overdue && <AlarmClock className="size-3.5" />}
                     Due: {a.due}
                   </span>
                 </div>
-                <p className="mt-1.5 text-[15px] leading-snug text-ink">{a.task}</p>
-                <div className="mt-2 flex items-center justify-between text-[13px]">
+                <p className="mt-1.5 break-words text-[15px] leading-snug text-ink">{a.task}</p>
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[13px]">
                   <span className="text-ink-3">
                     Owner: <span className="font-medium text-ink">{a.owner}</span>
                   </span>
-                  <span className={clsx('rounded px-1.5 py-0.5', s.pill)}>{a.status}</span>
+                  <span className={clsx('whitespace-nowrap rounded px-1.5 py-0.5', s.pill)}>{a.status}</span>
                 </div>
               </button>
             </li>

@@ -23,7 +23,14 @@ const RANGES: { key: TimeRange; label: string }[] = [
 export default function Overview() {
   const { asOf } = useAsOf()
   const [params, setParams] = useSearchParams()
-  const q = (params.get('q') ?? '').trim().toLowerCase()
+  const rawQuery = params.get('q') ?? ''
+  const q = rawQuery.trim().toLowerCase()
+  const setQuery = (v: string) => {
+    const next = new URLSearchParams(params)
+    if (v) next.set('q', v)
+    else next.delete('q')
+    setParams(next, { replace: true })
+  }
 
   const [range, setRange] = useState<TimeRange>('90d')
   const [filter, setFilter] = useState<SevFilter>('all')
@@ -94,7 +101,7 @@ export default function Overview() {
         <div className="flex flex-wrap items-center gap-4">
           <span className="flex items-center gap-2 rounded-md bg-good-soft/60 px-2.5 py-1 font-mono text-[12.5px] text-navy-900">
             <span className="size-1.5 rounded-full bg-good" />
-            Data as of {fmtDate(asOf)} · {PLANT_SCOPE}
+            Data as of {fmtDate(asOf)}, {PLANT_SCOPE}
           </span>
           <div role="radiogroup" aria-label="Time range" className="flex rounded-lg bg-slate-200/70 p-1">
             {RANGES.map((r) => (
@@ -126,6 +133,8 @@ export default function Overview() {
           onFilter={setFilter}
           sort={sort}
           onSort={setSort}
+          query={rawQuery}
+          onQuery={setQuery}
           selectedId={selectedId}
           hoveredId={hoveredId}
           onSelect={setSelectedId}

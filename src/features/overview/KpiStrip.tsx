@@ -66,14 +66,14 @@ export function KpiStrip({ kpi, rangeLabel, critical, activeCount }: Props) {
         {fmt(exposure, 1)}
         <Unit>M</Unit>
       </Tile>
-      <Tile label="Active Problems" foot={<span className="text-teal">{kpi.rawAlerts} CM breaches · 4 wk</span>}>
+      <Tile label="Active Problems" foot={<span className="text-teal">{kpi.rawAlerts} CM breaches in 4 weeks</span>}>
         {activeCount}
       </Tile>
       <Tile
         label="Critical Risk"
         className="bg-gradient-to-b from-critical-soft/40 to-transparent"
         extra={<span className="whitespace-nowrap rounded bg-critical-soft px-1.5 py-0.5 font-mono text-[11px] font-semibold text-critical">Attn Req</span>}
-        foot={<span className="text-critical">{critical.map((p) => p.id).join(' · ') || 'None'}</span>}
+        foot={<span className="text-critical">{critical.map((p) => p.id).join(', ') || 'None'}</span>}
       >
         <span className={clsx('inline-flex items-center gap-3', critical.length ? 'text-critical' : 'text-ink-2')}>
           {critical.length}

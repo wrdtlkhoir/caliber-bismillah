@@ -46,7 +46,7 @@ export function VerificationChart({ v }: { v: ActionCase['verification'] }) {
     <div className="rounded-lg bg-slate-50 p-3">
       <div className="flex items-start justify-between gap-3 font-mono text-[11.5px] text-ink-2">
         <span>
-          {v.title} ({v.unit}) · weekly CM
+          {v.title} ({v.unit}), weekly CM
         </span>
         <div className="flex gap-4">
           <span className="flex items-start gap-1.5">
@@ -126,7 +126,7 @@ export function VerificationChart({ v }: { v: ActionCase['verification'] }) {
             className="pointer-events-none absolute top-0 whitespace-nowrap rounded bg-ink px-2 py-1 font-mono text-[11px] text-white shadow-lg"
             style={{ left: Math.min(Math.max(x(hover) - 60, 0), width - 150) }}
           >
-            {fmtDate(all[hover].date, { day: '2-digit', month: 'short' })} · {hover > split ? 'After' : 'Before'} · {fmt(all[hover].value)} {v.unit}
+            {fmtDate(all[hover].date, { day: '2-digit', month: 'short' })}, {hover > split ? 'after' : 'before'}: {fmt(all[hover].value)} {v.unit}
           </div>
         )}
       </div>

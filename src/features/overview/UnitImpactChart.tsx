@@ -31,9 +31,9 @@ export function UnitImpactChart({ units, problems, threshold, range, selectedUni
     <Card className="p-5">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-medium text-ink">Downtime vs Loss by Plant — {RANGE_LABEL[range]}</h2>
+          <h2 className="text-lg font-medium text-ink">Downtime vs loss by plant ({RANGE_LABEL[range].toLowerCase()})</h2>
           <p className="text-[13px] text-ink-2">
-            Incident Database · click a plant to isolate its active problems
+            From the Incident Database. Click a plant to isolate its active problems.
             {selectedUnit && (
               <button onClick={() => onSelectUnit(null)} className="ml-2 font-medium text-navy-700 underline-offset-2 hover:underline">
                 Clear selection
@@ -71,7 +71,7 @@ export function UnitImpactChart({ units, problems, threshold, range, selectedUni
                   dimmed && 'opacity-45',
                 )}
               >
-                <p className="text-[11.5px] font-medium uppercase tracking-wide text-ink-2">{u.code} · {u.incidents} incident{u.incidents === 1 ? '' : 's'}</p>
+                <p className="text-[11.5px] font-medium uppercase tracking-wide text-ink-2">{u.code}, {u.incidents} incident{u.incidents === 1 ? '' : 's'}</p>
                 <p className="mt-1 truncate text-[16px] font-medium text-ink">{u.name === u.code ? `Plant ${u.code}` : u.name}</p>
 
                 <div className="relative mt-5 flex items-end gap-2 border-b border-slate-300" style={{ height: PLOT_H + 28 }}>
@@ -87,7 +87,7 @@ export function UnitImpactChart({ units, problems, threshold, range, selectedUni
                     color="bg-teal"
                     valueClass="text-teal"
                     delay={i * 60 + 80}
-                    tip={`${u.name}: US$${Math.round(u.lossK).toLocaleString('en-US')}k total loss · ${u.incidents} incidents`}
+                    tip={`${u.name}: US$${Math.round(u.lossK).toLocaleString('en-US')}k total loss, ${u.incidents} incidents`}
                   />
                 </div>
 

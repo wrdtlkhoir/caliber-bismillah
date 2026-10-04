@@ -18,7 +18,7 @@ export function AuditTrail({ entries, eventNo, unitLabel }: { entries: AuditEntr
           <History className="size-5 text-ink-2" /> Decision Audit Trail
         </h2>
         <Mono className="text-[13px] text-ink-2">
-          {unitLabel} · {eventNo}
+          {unitLabel} {eventNo}
         </Mono>
       </header>
       <ol className="mt-4 space-y-4">

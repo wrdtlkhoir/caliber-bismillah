@@ -15,7 +15,7 @@ export function BenchmarkPanel({ inv, value, digits }: { inv: Investigation; val
   return (
     <Card className="p-5">
       <header className="flex items-start justify-between gap-3">
-        <h2 className="text-[17px] font-medium leading-snug text-ink">What Changed? — {b.title}</h2>
+        <h2 className="text-[17px] font-medium leading-snug text-ink">What changed? {b.title}</h2>
         <button onClick={() => setOpen((v) => !v)} className="rounded p-1 text-ink-2 hover:bg-slate-100" aria-label={open ? 'Collapse' : 'Expand'} aria-expanded={open}>
           {open ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
         </button>
@@ -90,7 +90,7 @@ export function ImpactPanel({ steps }: { steps: ImpactStep[] }) {
               </span>
               <div className="min-w-0">
                 <p className="text-[11.5px] font-medium uppercase tracking-wide text-ink-2">
-                  Step {i + 1} · {s.title}
+                  Step {i + 1}: {s.title}
                 </p>
                 <p className={clsx('text-[15px] font-medium leading-snug', m.head)}>{s.headline}</p>
                 <p className={clsx('text-[13px]', s.kind === 'health' ? 'text-teal' : 'text-ink-2')}>{s.detail}</p>

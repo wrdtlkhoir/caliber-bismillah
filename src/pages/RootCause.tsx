@@ -13,16 +13,20 @@ import type { Problem } from '@/data/types'
 import { synthesize } from '@/lib/ahpPairwise'
 import { exportRcaDossier } from '@/lib/dossier'
 import { severityMeta } from '@/lib/severity'
+import { useConstraints } from '@/lib/constraints'
 import { useDecision } from '@/lib/useDecision'
+import { usePairwise } from '@/lib/usePairwise'
 import { formatDetected } from '@/features/investigation/AssetSummary'
 import { AuditTrail } from '@/features/rootcause/AuditTrail'
+import { ConstraintsEditor, ConstraintsPanel } from '@/features/rootcause/ConstraintsPanel'
+import { SolutionImpact } from '@/features/rootcause/SolutionImpact'
 import { HypothesisCard } from '@/features/rootcause/HypothesisCard'
 import { KnowledgePath } from '@/features/rootcause/KnowledgePath'
 import { PriorCheck } from '@/features/rootcause/PriorCheck'
 import { RankingPanel } from '@/features/rootcause/RankingPanel'
 import { ValidationPanel, type ValidationAction } from '@/features/rootcause/ValidationPanel'
 
-const ENGINE = 'Evidence synthesis: RCA 4P / 4M+1E · CM trends · Incident DB'
+const ENGINE = 'Evidence from RCA 4P / 4M+1E, CM trends and the Incident DB'
 
 export default function RootCause() {
   const { id } = useParams()
@@ -36,7 +40,10 @@ export default function RootCause() {
 
 function RootCauseView({ problem, rc }: { problem: Problem; rc: RootCauseCase }) {
   const a = rc.asset
-  const ranked = useMemo(() => synthesize(rc.hypotheses), [rc])
+  const pairwise = usePairwise()
+  const [constraints, setConstraints] = useConstraints(problem.id)
+  const [constraintsOpen, setConstraintsOpen] = useState(false)
+  const ranked = useMemo(() => synthesize(rc.hypotheses, pairwise.analysis.weights), [rc, pairwise.analysis.weights])
   const { decisions, log, record } = useDecision(problem.id)
   const [selectedId, setSelectedId] = useState(ranked[0].id)
   const [toast, showToast] = useToast()
@@ -54,7 +61,7 @@ function RootCauseView({ problem, rc }: { problem: Problem; rc: RootCauseCase })
     switch (action) {
       case 'accept':
         record({ actor: 'Engineer Decision', text: `${who} accepted ${h.id} (${h.title}) as validated root cause.${suffix}` }, { id: h.id, value: 'accepted' })
-        showToast(`${h.id} accepted — RCA validated`)
+        showToast(`${h.id} accepted, RCA validated`)
         break
       case 'reject': {
         record({ actor: 'Engineer Decision', text: `${who} rejected ${h.id} (${h.title}).${suffix}` }, { id: h.id, value: 'rejected' })
@@ -96,7 +103,7 @@ function RootCauseView({ problem, rc }: { problem: Problem; rc: RootCauseCase })
               <span className={clsx('size-1.5 rounded-full', problem.severity === 'medium' ? 'bg-ink-2' : sev.bar)} /> {sev.label}
             </span>
             <span className="flex items-center gap-1.5 rounded bg-good-soft px-2 py-0.5 text-[14px] text-good">
-              <span className="size-1.5 rounded-full bg-good" /> Class {a.eqClass} · {a.criticality} criticality
+              <span className="size-1.5 rounded-full bg-good" /> Class {a.eqClass}, {a.criticality} criticality
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[15px] text-ink-2">
@@ -116,7 +123,7 @@ function RootCauseView({ problem, rc }: { problem: Problem; rc: RootCauseCase })
             <BadgeCheck className={clsx('size-5', acceptedId ? 'text-good' : 'text-navy-700')} /> {stage}
           </span>
           <button
-            onClick={() => exportRcaDossier(problem, a, ranked, decisions, [...rc.audit, ...log])}
+            onClick={() => exportRcaDossier(problem, a, ranked, decisions, [...rc.audit, ...log], pairwise.analysis)}
             className="flex items-center gap-2 rounded-lg bg-navy-800 px-5 py-2.5 text-[15.5px] font-medium text-white shadow-card hover:bg-navy-700"
           >
             <Download className="size-4" /> Export RCA Dossier
@@ -151,7 +158,7 @@ function RootCauseView({ problem, rc }: { problem: Problem; rc: RootCauseCase })
                   <Sparkles className="size-5" />
                 </span>
                 <div>
-                  <p className="text-[13.5px] text-teal">AI hypotheses — require engineer validation</p>
+                  <p className="text-[13.5px] text-teal">AI hypotheses, pending engineer validation</p>
                   <h2 id="hyp-title" className="text-[20px] font-medium text-navy-900">
                     Triangulated Root Causes
                   </h2>
@@ -172,11 +179,13 @@ function RootCauseView({ problem, rc }: { problem: Problem; rc: RootCauseCase })
               ))}
             </div>
           </section>
+          <SolutionImpact asset={a} hypothesis={selected} constraints={constraints} onEditConstraints={() => setConstraintsOpen(true)} />
           {rc.prior && <PriorCheck prior={rc.prior} problemId={problem.id} />}
         </div>
 
         <div className="space-y-5">
-          <RankingPanel h={selected} rank={rank} />
+          <RankingPanel h={selected} rank={rank} pairwise={pairwise} />
+          <ConstraintsPanel constraints={constraints} onEdit={() => setConstraintsOpen(true)} />
           <ValidationPanel
             key={selected.id}
             h={selected}
@@ -190,6 +199,7 @@ function RootCauseView({ problem, rc }: { problem: Problem; rc: RootCauseCase })
       </div>
 
       <KnowledgePath path={rc.path} />
+      {constraintsOpen && <ConstraintsEditor open initial={constraints} onClose={() => setConstraintsOpen(false)} onSave={setConstraints} />}
       {toast}
     </div>
   )

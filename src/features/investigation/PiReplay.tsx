@@ -63,11 +63,11 @@ export function PiReplay({ asset, asOf, live, onFinished }: { asset: Asset; asOf
             {live && <span className="rounded bg-good-soft px-1.5 py-0.5 text-[11.5px] font-medium text-good">Replaying</span>}
           </h2>
           <p className="text-[13px] text-ink-2">
-            PI extract {fmtHour(piTimeAt(asset, 0)).slice(0, 6)} – {fmtHour(piTimeAt(asset, total - 1)).slice(0, 6)} · last {WINDOW_H} h shown · grey = RUN_STATUS OFF
+            PI extract {fmtHour(piTimeAt(asset, 0)).slice(0, 6)} to {fmtHour(piTimeAt(asset, total - 1)).slice(0, 6)}. Showing the last {WINDOW_H} h, grey marks RUN_STATUS OFF.
           </p>
         </div>
         <Mono className={clsx('rounded-md px-2.5 py-1 text-[13px] font-semibold', running ? 'bg-slate-100 text-ink' : 'bg-critical-soft text-critical')}>
-          {fmtHour(piTimeAt(asset, cursor))} WIB · {running ? 'ON' : 'OFF'}
+          {fmtHour(piTimeAt(asset, cursor))} WIB, {running ? 'ON' : 'OFF'}
         </Mono>
       </header>
 
@@ -81,7 +81,7 @@ export function PiReplay({ asset, asOf, live, onFinished }: { asset: Asset; asOf
                 {p.rawColumns[p.columns.indexOf(c)]}
               </dt>
               <dd className={clsx('font-mono text-[16px] font-semibold', c === 'VIB' && vibHigh ? 'text-critical' : 'text-ink')}>
-                {v ?? '—'} <span className="text-[11px] font-normal text-ink-2">{t?.engunits ?? ''}</span>
+                {v ?? 'n/a'} <span className="text-[11px] font-normal text-ink-2">{t?.engunits ?? ''}</span>
               </dd>
             </div>
           )
@@ -90,7 +90,7 @@ export function PiReplay({ asset, asOf, live, onFinished }: { asset: Asset; asOf
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         <div>
-          <p className="mb-1.5 text-[13px] text-ink-2">Vibration ({tagOf('VIB')?.engunits}) · typical {typicalVib}</p>
+          <p className="mb-1.5 text-[13px] text-ink-2">Vibration ({tagOf('VIB')?.engunits}), typical {typicalVib}</p>
           <TrendChart points={series('VIB')} color={vibHigh ? 'critical' : 'navy'} unit={tagOf('VIB')?.engunits ?? ''} digits={2} offMask={offMask} ariaLabel="Hourly vibration" />
         </div>
         <div>

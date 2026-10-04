@@ -29,7 +29,7 @@ export function AddActionModal({ open, onClose, onAdd, nextId }: { open: boolean
       due: form.due,
       priority: form.priority,
       status: 'Not started',
-      criteria: form.criteria.trim() || '—',
+      criteria: form.criteria.trim() || 'Not defined',
     })
     setForm((f) => ({ ...f, title: '', owner: '', team: '', criteria: '' }))
     onClose()
